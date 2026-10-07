@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import humanHead from "./human-head.json";
 
 export const boneLayout = [
   ["pelvis", "", 0, 0.96, 0],
@@ -76,10 +77,11 @@ export function buildFootballer(detail=true): FootballerAsset {
     }),
     new THREE.MeshStandardMaterial({
       name: "eyes",
-      color: "#928879",
+      color: "#c6b9a6",
       roughness: 0.6,
     }),
   ];
+  materials.push(new THREE.MeshStandardMaterial({name:"kit-sleeve",color:"#f4c64b",roughness:.9}));
   const positions: number[] = [],
     indices: number[] = [],
     skinIndices: number[] = [],
@@ -240,18 +242,19 @@ export function buildFootballer(detail=true): FootballerAsset {
       foot = `foot${suffix}` as BoneName;
     const x = side * 0.105,
       ax = side * 0.267;
-    ellipsoid(ax,1.475,0,.078,.09,.077,0,arm);
+
     loft(
       [
         [ax, 1.26, 0, 0.062, 0.064],
         [ax, 1.32, 0, 0.075, 0.075],
         [ax, 1.4, 0, 0.082, 0.079],
-        [ax, 1.49, 0, 0.083, 0.076],
-        [ax, 1.54, 0, 0.035, 0.038],
+        [side*.248, 1.47, 0, .073, .077],
+        [side*.21, 1.515, 0, .065, .081],
+        [side*.17, 1.54, 0, .05, .073],
       ],
-      0,
-      rigid(arm),
-      16,
+      7,
+      blend(arm,"chest",1.4,1.54),
+      20,
     );
     loft(
       [
@@ -314,32 +317,31 @@ export function buildFootballer(detail=true): FootballerAsset {
     ellipsoid(x, 0.027, 0.097, 0.072, 0.017, 0.14, 3, foot);
     for (let lace = 0; lace < 3; lace++)
       ellipsoid(x, 0.108, 0.08 + lace * 0.022, 0.044, 0.004, 0.004, 3, foot);
-    // Ears and understated eye geometry; face surface contains nose, brow and jaw forms.
-    ellipsoid(side * 0.108, 1.735, -0.004, 0.018, 0.033, 0.026, 1, "head");
-    ellipsoid(side * 0.046, 1.751, 0.103, 0.018, 0.005, 0.006, 6, "head");
-    ellipsoid(side * 0.046, 1.751, 0.109, 0.006, 0.005, 0.003, 5, "head");
-    ellipsoid(side * 0.046, 1.77, 0.1, 0.028, 0.004, 0.008, 5, "head");
   }
-  ellipsoid(0, 1.735, 0, 0.112, 0.145, 0.107, 1, "head", true);
-  // Close cropped hair cap. Distinct hairstyles can replace this material group later.
-  loft(
-    [
-      [0, 1.787, 0, 0.111, 0.107],
-      [0, 1.823, 0, 0.103, 0.096],
-      [0, 1.853, 0, 0.078, 0.074],
-      [0,1.865,0,.049,.046],
-      [0, 1.87, 0, 0.003, 0.003],
-    ],
-    5,
-    rigid("head"),
-    28,
-  );
-  ellipsoid(0,1.727,.12,.018,.035,.019,1,'head');
-  ellipsoid(-.013,1.707,.127,.012,.009,.009,1,'head');
-  ellipsoid(.013,1.707,.127,.012,.009,.009,1,'head');
-  ellipsoid(0,1.682,.106,.029,.007,.012,1,'head');
-  ellipsoid(0,1.677,.108,.026,.002,.01,5,'head');
-  ellipsoid(0,1.672,.105,.027,.006,.01,1,'head');
+  // Authored MakeHuman CC0 topology replaces the primitive face and ears.
+  const headBase=positions.length/3,headStart=indices.length;
+  for(let i=0;i<humanHead.positions.length;i+=3){
+    const [x,y,z]=humanHead.positions.slice(i,i+3);
+    vertex(x,y,z,(Math.atan2(z,x)+Math.PI)/(2*Math.PI),(y-1.59)/.31,rigid('head'));
+  }
+  indices.push(...humanHead.indices.map(i=>i+headBase));
+  geometry.addGroup(headStart,indices.length-headStart,1);
+  for(const [x,y,z] of humanHead.eyes){
+    ellipsoid(x,y,z,.0135,.0105,.0125,6,'head');
+    ellipsoid(x,y,z+.0115,.005,.006,.0025,5,'head');
+    ellipsoid(x,y+.016,z-.001,.022,.003,.009,5,'head');
+  }
+  // Hair follows the authored scalp instead of a separate spherical cap.
+  const scalpStart=indices.length;
+  for(let i=0;i<humanHead.indices.length;i+=3){
+    const face=humanHead.indices.slice(i,i+3);
+    if(face.every(v=>{const x=humanHead.positions[v*3],y=humanHead.positions[v*3+1],z=humanHead.positions[v*3+2];return y>1.829||(y>1.785&&Math.abs(x)>.068&&z<.045);})){
+      const base=positions.length/3;
+      for(const v of face){const x=humanHead.positions[v*3],y=humanHead.positions[v*3+1],z=humanHead.positions[v*3+2];vertex(x*1.014,y+.001,z*1.014,0,0,rigid('head'));}
+      indices.push(base,base+1,base+2);
+    }
+  }
+  geometry.addGroup(scalpStart,indices.length-scalpStart,5);
   // Collar trim, shirt seams and boot detailing are modeled and survive offline export.
   loft(
     [

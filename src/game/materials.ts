@@ -15,3 +15,19 @@ export function detailedMaterial(m:THREE.MeshStandardMaterial){
  if(m.name==='skin'){skin??=grain('skin');m.map=skin;m.bumpMap=skin;m.bumpScale=.0006;m.roughness=.76;}
  if(m.name==='hair'){hair??=grain('hair');m.map=hair;m.bumpMap=hair;m.bumpScale=.003;m.roughness=.98;}
 }
+
+const kits=new Map<string,THREE.CanvasTexture>();
+export function kitPattern(color:string){
+ const key=color.toLowerCase();if(kits.has(key))return kits.get(key)!;
+ const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d')!;
+ x.fillStyle='#faf8ef';x.fillRect(0,0,512,512);
+ const style=key==='#f4c64b'?0:key==='#5cc5b5'?1:key==='#e8815d'?2:3;
+ x.fillStyle=style===0?'#304b33':'#253b44';
+ if(style===0){for(const offset of [-512,0,512]){x.beginPath();x.moveTo(offset+30,0);x.lineTo(offset+95,0);x.lineTo(offset+350,512);x.lineTo(offset+285,512);x.fill();}}
+ if(style===1)for(let n=0;n<512;n+=38)x.fillRect(n,0,15,512);
+ if(style===2)for(let n=0;n<512;n+=100)x.fillRect(0,n,512,34);
+ if(style===3){x.fillRect(0,290,512,60);x.fillRect(0,365,512,8);}
+ x.fillStyle='#23382e';x.fillRect(0,0,512,15);x.fillRect(0,493,512,19);
+ for(let n=0;n<512;n+=3){x.fillStyle=n%2?'#0000000a':'#ffffff12';x.fillRect(n,0,1,512);x.fillRect(0,n,512,1);}
+ const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;kits.set(key,texture);return texture;
+}

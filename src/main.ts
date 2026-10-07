@@ -1,3 +1,4 @@
+import {type Formation} from "./content/formations";
 import {conditions,type Conditions} from "./content/conditions";
 import "./style.css";
 import { renderShell } from "./ui/shell";
@@ -28,6 +29,7 @@ async function boot() {
   const debug=import.meta.env.DEV?(await import("./game/debug")).installFootballDebug(()=>match):null;
   const startingFives=teams.map(()=>[0,1,2,3,4]);
   const gamePlans:Tactic[]=teams.map(()=>'balanced');
+  const shapes:Formation[]=teams.map(()=>'2-2');
   let selectedSlot=3,managingLive=false;
   let renderer = new PitchRenderer(document.querySelector("#court")!, [
     teams[0].color,
@@ -40,6 +42,7 @@ async function boot() {
     if(page==='match'&&!running){router.go('setup');return;}
     if(page==='results'&&match.state!=='FULL_TIME'){router.go('home');return;}
     renderer.matchView=page==='match';
+    document.querySelectorAll('[data-step]').forEach(el=>el.setAttribute('aria-current',el.getAttribute('data-step')===page?'step':'false'));
     document.body.classList.toggle('in-match',page==='match');
     audio.setMatchActive(page==='match');
     audio.setScene(page==='results'?(match.score[0]>match.score[1]?'win':match.score[0]<match.score[1]?'loss':'draw'):page==='match'?'intro':page==='home'?'menu':'selection');
@@ -52,7 +55,7 @@ async function boot() {
     const team=managingLive?playingTeam:chosen,roster=managingLive?match.rosters[0]:makeRoster(team),lineup=managingLive?match.lineups[0]:startingFives[team];
     const stamina=managingLive?match.players.slice(0,5).map(p=>p.stamina):[1,1,1,1,1];
     $('#squad-page').style.setProperty('--squad-kit',teams[team].color);
-    $('#squad-content').innerHTML=squadMarkup(roster,lineup,selectedSlot,stamina,managingLive?match.tactics[0]:gamePlans[team],managingLive,team);
+    $('#squad-content').innerHTML=squadMarkup(roster,lineup,selectedSlot,stamina,managingLive?match.tactics[0]:gamePlans[team],managingLive,team,managingLive?match.formations[0]:shapes[team]);
     $('#squad-continue').textContent=managingLive?'RETURN TO MATCH ↗':'MATCH SETUP ↗';
     document.querySelectorAll<HTMLElement>('[data-slot]').forEach(el=>el.onclick=()=>{selectedSlot=Number(el.dataset.slot);renderSquad();});
     document.querySelectorAll<HTMLElement>('[data-reserve]').forEach(el=>el.onclick=()=>{
@@ -61,6 +64,7 @@ async function boot() {
       else lineup[selectedSlot]=reserve;
       renderSquad();$('#squad-feedback').textContent=`${roster[reserve].name} replaces ${out}.`;
     });
+    document.querySelectorAll<HTMLElement>('[data-formation]').forEach(el=>el.onclick=()=>{const formation=el.dataset.formation as Formation;if(managingLive)match.setFormation(0,formation);else shapes[team]=formation;renderSquad();});
     $<HTMLSelectElement>('#tactic-select').onchange=e=>{const tactic=(e.target as HTMLSelectElement).value as Tactic;if(managingLive)match.tactics[0]=tactic;else gamePlans[team]=tactic;renderSquad();};
     if(managingLive)$('#control-player').onclick=()=>{match.selectPlayer(selectedSlot);$('#squad-feedback').textContent=`You will control ${roster[lineup[selectedSlot]].name}.`;};
   }
@@ -126,6 +130,7 @@ async function boot() {
   for(const selector of ['#music-volume','#dialog-music-volume'])$<HTMLInputElement>(selector).oninput=e=>audio.setVolume(Number((e.target as HTMLInputElement).value)/100);
   $<HTMLInputElement>('#effects-toggle').onchange=e=>audio.setEffects((e.target as HTMLInputElement).checked);
   audio.onChange();
+  const homePreview=new SquadPreview($("#home-players"),teams[0].color,true);
   const squadPreview = new SquadPreview($("#squad-model"), teams[chosen].color);
   document
     .querySelectorAll<HTMLButtonElement>("[data-motion]")
@@ -197,10 +202,13 @@ async function boot() {
     renderer.setConditions(match.condition);
     match.configure(0,makeRoster(chosen),startingFives[chosen],gamePlans[chosen]);
     match.configure(1,makeRoster(opponent),[0,1,2,3,4]);
+    match.setFormation(0,shapes[chosen]);match.resetPositions(0);
     renderer.lastScore=0;
     match.players.forEach(p=>renderer.setPlayerAppearance(p.id,p.keeper?'#d66b49':teams[p.team===0?chosen:opponent].color,match.lineups[p.team][p.id%5],match.athlete(p).number));
     $("#home-score-name").textContent = teams[chosen].short;
     $("#away-score-name").textContent = teams[opponent].short;
+    $("#scoreboard").style.setProperty("--home-kit",teams[chosen].color);
+    $("#scoreboard").style.setProperty("--away-kit",teams[opponent].color);
     squadPreview.setMotion("idle", performance.now() / 1000);
     squadPreview.draw(performance.now() / 1000);
     document
@@ -233,7 +241,9 @@ async function boot() {
       };
     } else start();
   };
-  $("#hero-play").onclick=()=>router.go("clubs");
+  $("#hero-play").onclick=()=>{mode='match';router.go("clubs");};
+  $('#quick-play').onclick=()=>{mode='match';start();};
+  $('#home-training').onclick=()=>{mode='training';start();};
   $("#pause").onclick = () => input.pause();
   $('#home-nav').onclick=()=>router.go('home');
   $('#area-nav').onclick=(event)=>{event.preventDefault();router.go('clubs');};
@@ -329,6 +339,7 @@ async function boot() {
     if(replay.showing&&fresh.pass&&match.state!=='PAUSED'){replay.skip();queued=idle();}
     if(courtVisible&&!document.hidden)renderer.draw(replayFrame??match,dt,replay.showing);
     $('#court').classList.toggle('replaying',replay.showing);
+    if(router.page==='home'&&!document.hidden)homePreview.draw(now/1000);
     if (squadVisible&&!document.hidden&&(!running || match.state === "PAUSED" || squadPreview.motion !== "idle"))
       squadPreview.draw(now / 1000);
     if (running) {

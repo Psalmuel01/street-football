@@ -1,3 +1,4 @@
+import {formations,type Formation} from "../content/formations";
 import {gameplay} from "./gameplay.config";
 import {passOptions,passDestination} from "./football/passing";
 import {conditions,type Conditions} from "../content/conditions";
@@ -66,6 +67,12 @@ export class Match {
   rosters: Athlete[][] = [makeRoster(0),makeRoster(1)];
   lineups = [[0,1,2,3,4],[0,1,2,3,4]];
   tactics: Tactic[] = ['balanced','balanced'];
+  formations:Formation[]=['2-2','2-2'];
+  setFormation(team:number,formation:Formation){
+    if(!(formation in formations)||team<0||team>1)return;
+    this.formations[team]=formation;
+    for(const p of this.players.filter(p=>p.team===team)){const [x,y]=formations[formation].positions[p.id%5],sign=team===0?1:-1;p.homeX=x*sign;p.homeY=y*sign;}
+  }
   substitutions = [0,0];
   configure(team:number,roster:Athlete[],lineup:number[],tactic:Tactic='balanced') {
     if(new Set(lineup).size!==5||lineup.length!==5||roster[lineup[0]]?.role!=='GK'||lineup.slice(1).some(i=>!roster[i]||roster[i].role==='GK'))throw new Error('Invalid starting five');
@@ -122,13 +129,7 @@ export class Match {
     this.players = [];
     for (let t = 0; t < 2; t++) {
       const sign = t === 0 ? 1 : -1;
-      [
-        [-28, 0],
-        [-16, -9],
-        [-16, 9],
-        [-5, -6],
-        [-5, 6],
-      ].forEach(([x, y], i) =>
+      formations[this.formations[t]].positions.forEach(([x, y], i) =>
         this.players.push({
           id: t * 5 + i,
           team: t,

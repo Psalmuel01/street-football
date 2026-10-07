@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { detailedMaterial } from "./materials";
+import { detailedMaterial, kitPattern } from "./materials";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
 import { buildFootballer, type BoneName } from "./assets/footballer";
@@ -82,8 +82,10 @@ export function createCharacter(
         (material) => {
           const m = material.clone();
           detailedMaterial(m);
+          if(m.name==="kit-sleeve")m.color.set(color);
           if (m.name === "kit") {
             m.color.set(color);
+            m.map=kitPattern(color);
             kit = m;
           }
           if(!detail&&m.name==='socks')m.color.set(skinTones[index%skinTones.length]);
@@ -98,13 +100,13 @@ export function createCharacter(
   if(detail){
     // Instanced short twists keep the silhouette irregular without one draw per curl.
     const hairMaterial=new THREE.MeshStandardMaterial({color:index%4===2?'#251e18':'#141512',roughness:.98});
-    const count=index%3===0?54:32;
+    const count=index%3===0?100:60;
     const curls=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),hairMaterial,count);
     const transform=new THREE.Object3D();
     for(let n=0;n<count;n++){
-      const theta=n*2.39996,r=Math.sqrt((n+.5)/count)*.106;
-      transform.position.set(Math.cos(theta)*r,.078+Math.sqrt(Math.max(0,1-r*r/.012))*.066,Math.sin(theta)*r);
-      transform.scale.set(.018,.019+(index%3===0?.022:.008)*(1-r/.12),.017);
+      const theta=n*2.39996,r=Math.sqrt((n+.5)/count)*.086;
+      transform.position.set(Math.cos(theta)*r,.127+Math.sqrt(Math.max(0,1-r*r/.009))*.048,Math.sin(theta)*r);
+      transform.scale.set(.014,.016+(index%3===0?.017:.004)*(1-r/.12),.013);
       transform.rotation.set(n*.7,n*.9,n*.2);transform.updateMatrix();curls.setMatrixAt(n,transform.matrix);
     }
     curls.castShadow=true;bones.head.add(curls);
@@ -294,29 +296,33 @@ export class SquadPreview {
   rigs: CharacterRig[] = [];
   motion: "idle" | "run" | "shot" | "tackle" | "catch" = "idle";
   motionStart = 0;
-  constructor(host: HTMLElement, color: string) {
+  constructor(host: HTMLElement, color: string, showcase=false) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     this.renderer.setClearColor("#1a2824", 0);
+    this.renderer.shadowMap.enabled=true;
+    this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     host.append(this.renderer.domElement);
     this.scene.add(new THREE.HemisphereLight("#e9f2ff", "#4d4738", 2));
     const key = new THREE.DirectionalLight("#ffdfac", 3);
     key.position.set(-3, 5, 5);
-    this.scene.add(key);
+    key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-4;key.shadow.camera.right=4;key.shadow.camera.top=4;key.shadow.camera.bottom=-4;key.shadow.bias=-.0005;this.scene.add(key);
     const rim = new THREE.DirectionalLight("#b0ded3", 3);
     rim.position.set(3, 3, -3);
     this.scene.add(rim);
-    this.camera.position.set(0, 1.25, 4.75);
+    this.camera.position.set(0, 1.25, showcase?4.6:4.75);
     this.camera.lookAt(0, 1.02, 0);
     for (let i = 0; i < 3; i++) {
-      const rig = createCharacter(color, i + 1);
-      rig.root.position.set((i - 1) * 0.7, 0, i === 1 ? 0.25 : 0);
+      const shade=showcase?["#5cc5b5",color,"#e8815d"][i]:color;
+      const rig = createCharacter(shade, i + 1);
+      rig.root.position.set((i - 1) * (showcase?.88:.7), 0, i === 1 ? .4 : 0);
       rig.root.rotation.y = (i - 1) * -0.2;
       this.rigs.push(rig);
       this.scene.add(rig.root);
     }
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.ShadowMaterial({opacity:.24}));floor.rotation.x=-Math.PI/2;floor.position.y=-.005;floor.receiveShadow=true;this.scene.add(floor);
     new ResizeObserver(() => {
       if (!host.clientWidth || !host.clientHeight) return;
       this.renderer.setSize(host.clientWidth, host.clientHeight);
@@ -325,7 +331,7 @@ export class SquadPreview {
     }).observe(host);
   }
   setColor(color: string) {
-    this.rigs.forEach((r) => r.kit.color.set(color));
+    this.rigs.forEach((r) => {r.kit.color.set(color);r.kit.map=kitPattern(color);});
   }
   setMotion(motion: typeof this.motion, time: number) {
     this.motion = motion;
