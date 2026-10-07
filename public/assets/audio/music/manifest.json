@@ -1,0 +1,112 @@
+[
+  {
+    "id": "after-hours",
+    "title": "After Hours",
+    "bpm": 106,
+    "seed": 51,
+    "variant": 0,
+    "bars": 48,
+    "group": "menu",
+    "duration": 108.67924528301887,
+    "peak": 0.6898165345191956
+  },
+  {
+    "id": "mainland-sunshine",
+    "title": "Mainland Sunshine",
+    "bpm": 112,
+    "seed": 419,
+    "variant": 1,
+    "bars": 48,
+    "group": "menu",
+    "duration": 102.85714285714286,
+    "peak": 0.7533487677574158
+  },
+  {
+    "id": "kiosk-sessions",
+    "title": "Kiosk Sessions",
+    "bpm": 104,
+    "seed": 713,
+    "variant": 2,
+    "bars": 24,
+    "group": "ambient",
+    "duration": 55.38461538461538,
+    "peak": 0.7360571026802063
+  },
+  {
+    "id": "junction-groove",
+    "title": "Junction Groove",
+    "bpm": 110,
+    "seed": 928,
+    "variant": 3,
+    "bars": 24,
+    "group": "ambient",
+    "duration": 52.36363636363636,
+    "peak": 0.6747829914093018
+  },
+  {
+    "id": "ground-opens",
+    "title": "The Ground Opens",
+    "bpm": 106,
+    "seed": 851,
+    "variant": 2,
+    "bars": 4,
+    "group": "intro",
+    "duration": 9.056603773584905,
+    "peak": 0.6742380857467651
+  },
+  {
+    "id": "our-area",
+    "title": "Our Area",
+    "bpm": 112,
+    "seed": 642,
+    "variant": 1,
+    "bars": 4,
+    "group": "intro",
+    "duration": 8.571428571428571,
+    "peak": 0.6713836193084717
+  },
+  {
+    "id": "win",
+    "title": "Area Celebration",
+    "bpm": 112,
+    "seed": 511,
+    "variant": 1,
+    "bars": 16,
+    "group": "results",
+    "duration": 34.285714285714285,
+    "peak": 0.8375157117843628
+  },
+  {
+    "id": "draw",
+    "title": "Respect the Game",
+    "bpm": 106,
+    "seed": 442,
+    "variant": 0,
+    "bars": 16,
+    "group": "results",
+    "duration": 36.22641509433962,
+    "peak": 0.7034983038902283
+  },
+  {
+    "id": "loss",
+    "title": "Run It Back",
+    "bpm": 104,
+    "seed": 812,
+    "variant": 2,
+    "bars": 16,
+    "group": "results",
+    "duration": 36.92307692307692,
+    "peak": 0.7256844639778137
+  },
+  {
+    "id": "ground-owner",
+    "title": "This Ground Get Owner",
+    "bpm": 112,
+    "seed": 735,
+    "variant": 3,
+    "bars": 8,
+    "group": "champion",
+    "duration": 17.142857142857142,
+    "peak": 0.681106448173523
+  }
+]

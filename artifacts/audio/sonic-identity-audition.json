@@ -1,0 +1,38 @@
+{
+  "labels": [
+    {
+      "name": "Home",
+      "seconds": 0.00020000000298023223
+    },
+    {
+      "name": "Community selection",
+      "seconds": 6.00310000000149
+    },
+    {
+      "name": "Ground intro",
+      "seconds": 10.00620000000298
+    },
+    {
+      "name": "Play near speaker",
+      "seconds": 14.01120000000298
+    },
+    {
+      "name": "Play away from speaker",
+      "seconds": 20.01589999999851
+    },
+    {
+      "name": "Goal",
+      "seconds": 24.021800000004472
+    },
+    {
+      "name": "Replay",
+      "seconds": 28.02520000000298
+    },
+    {
+      "name": "Full time and win",
+      "seconds": 32.0265
+    }
+  ],
+  "peak": 0.5084356069564819,
+  "duration": 37.98
+}

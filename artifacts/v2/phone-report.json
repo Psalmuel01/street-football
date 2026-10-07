@@ -1,0 +1,723 @@
+{
+  "state": "FULL_TIME",
+  "elapsed": 180,
+  "score": [
+    3,
+    4
+  ],
+  "passes": [
+    23,
+    16
+  ],
+  "completed": [
+    22,
+    13
+  ],
+  "shots": [
+    21,
+    17
+  ],
+  "saves": [
+    13,
+    18
+  ],
+  "tackles": [
+    7,
+    7
+  ],
+  "frames": 10741,
+  "medianMs": 16.69999999999709,
+  "p95Ms": 16.70000000001164,
+  "events": [
+    {
+      "event": "kickoff",
+      "time": 0,
+      "owner": 3
+    },
+    {
+      "event": "pass",
+      "time": 0,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 2.7833333333333283,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 3.0833333333333273,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 4.116666666666657,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 4.34999999999999,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 10.466666666666766,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 10.900000000000121,
+      "owner": 0
+    },
+    {
+      "event": "tackle",
+      "time": 12.250000000000188,
+      "owner": 8
+    },
+    {
+      "event": "shot",
+      "time": 12.36666666666686,
+      "owner": null
+    },
+    {
+      "event": "goal",
+      "time": 12.683333333333543,
+      "owner": null
+    },
+    {
+      "event": "kickoff",
+      "time": 12.683333333333543,
+      "owner": 3
+    },
+    {
+      "event": "pass",
+      "time": 12.683333333333543,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 13.600000000000255,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 15.800000000000365,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 16.100000000000367,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 21.533333333333392,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 22.183333333333355,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 23.09999999999997,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 23.533333333333278,
+      "owner": 0
+    },
+    {
+      "event": "pass",
+      "time": 24.683333333333213,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 25.849999999999813,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 28.183333333333014,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 31.133333333332846,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 31.383333333332832,
+      "owner": null
+    },
+    {
+      "event": "tackle",
+      "time": 36.43333333333255,
+      "owner": 3
+    },
+    {
+      "event": "tackle",
+      "time": 37.149999999999174,
+      "owner": 3
+    },
+    {
+      "event": "shot",
+      "time": 38.99999999999907,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 39.449999999999044,
+      "owner": 0
+    },
+    {
+      "event": "tackle",
+      "time": 40.71666666666564,
+      "owner": 8
+    },
+    {
+      "event": "shot",
+      "time": 40.8333333333323,
+      "owner": null
+    },
+    {
+      "event": "goal",
+      "time": 41.14999999999895,
+      "owner": null
+    },
+    {
+      "event": "kickoff",
+      "time": 41.14999999999895,
+      "owner": 3
+    },
+    {
+      "event": "pass",
+      "time": 41.14999999999895,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 42.18333333333222,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 42.76666666666552,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 43.34999999999882,
+      "owner": null
+    },
+    {
+      "event": "tackle",
+      "time": 43.916666666665456,
+      "owner": 9
+    },
+    {
+      "event": "pass",
+      "time": 44.29999999999877,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 47.816666666665235,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 48.23333333333188,
+      "owner": 0
+    },
+    {
+      "event": "tackle",
+      "time": 49.48333333333181,
+      "owner": 8
+    },
+    {
+      "event": "shot",
+      "time": 49.59999999999847,
+      "owner": null
+    },
+    {
+      "event": "goal",
+      "time": 49.916666666665115,
+      "owner": null
+    },
+    {
+      "event": "kickoff",
+      "time": 49.916666666665115,
+      "owner": 3
+    },
+    {
+      "event": "pass",
+      "time": 49.916666666665115,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 50.83333333333173,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 53.033333333331605,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 53.33333333333159,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 58.599999999997955,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 59.24999999999792,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 60.349999999997856,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 60.783333333331164,
+      "owner": 0
+    },
+    {
+      "event": "pass",
+      "time": 61.89999999999777,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 63.06666666666437,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 65.39999999999758,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 68.34999999999741,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 68.5999999999974,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 73.54999999999711,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 74.9666666666637,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 75.43333333333034,
+      "owner": 0
+    },
+    {
+      "event": "pass",
+      "time": 77.06666666666358,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 81.68333333332998,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 81.94999999999663,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 88.51666666666293,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 88.88333333332957,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 91.09999999999611,
+      "owner": 4
+    },
+    {
+      "event": "pass",
+      "time": 91.64999999999608,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 95.01666666666256,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 95.29999999999588,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 98.89999999999567,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 102.79999999999545,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 103.18333333332876,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 109.34999999999508,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 109.61666666666173,
+      "owner": null
+    },
+    {
+      "event": "tackle",
+      "time": 110.36666666666169,
+      "owner": 4
+    },
+    {
+      "event": "shot",
+      "time": 110.68333333332833,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 110.91666666666165,
+      "owner": null
+    },
+    {
+      "event": "tackle",
+      "time": 111.36666666666163,
+      "owner": 4
+    },
+    {
+      "event": "shot",
+      "time": 111.68333333332828,
+      "owner": null
+    },
+    {
+      "event": "goal",
+      "time": 111.94999999999493,
+      "owner": null
+    },
+    {
+      "event": "kickoff",
+      "time": 111.94999999999493,
+      "owner": 8
+    },
+    {
+      "event": "pass",
+      "time": 111.94999999999493,
+      "owner": null
+    },
+    {
+      "event": "tackle",
+      "time": 113.01666666666154,
+      "owner": 4
+    },
+    {
+      "event": "pass",
+      "time": 113.23333333332819,
+      "owner": 9
+    },
+    {
+      "event": "pass",
+      "time": 113.84999999999482,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 115.76666666666138,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 116.23333333332802,
+      "owner": 0
+    },
+    {
+      "event": "pass",
+      "time": 117.89999999999459,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 122.43333333332767,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 122.69999999999432,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 123.43333333332761,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 123.66666666666093,
+      "owner": null
+    },
+    {
+      "event": "tackle",
+      "time": 124.28333333332756,
+      "owner": 6
+    },
+    {
+      "event": "pass",
+      "time": 124.8999999999942,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 130.09999999999567,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 130.6499999999961,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 131.0833333333298,
+      "owner": 0
+    },
+    {
+      "event": "pass",
+      "time": 132.4833333333309,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 137.10000000000124,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 137.40000000000148,
+      "owner": null
+    },
+    {
+      "event": "tackle",
+      "time": 142.16666666667194,
+      "owner": 4
+    },
+    {
+      "event": "pass",
+      "time": 142.40000000000546,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 145.1000000000076,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 145.40000000000785,
+      "owner": 5
+    },
+    {
+      "event": "pass",
+      "time": 146.16666666667513,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 146.7666666666756,
+      "owner": null
+    },
+    {
+      "event": "goal",
+      "time": 146.91666666667572,
+      "owner": null
+    },
+    {
+      "event": "kickoff",
+      "time": 146.91666666667572,
+      "owner": 8
+    },
+    {
+      "event": "pass",
+      "time": 146.91666666667572,
+      "owner": null
+    },
+    {
+      "event": "tackle",
+      "time": 148.0166666666766,
+      "owner": 4
+    },
+    {
+      "event": "shot",
+      "time": 150.73333333334543,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 151.016666666679,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 152.06666666667982,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 152.30000000001334,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 158.43333333335156,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 158.86666666668523,
+      "owner": 0
+    },
+    {
+      "event": "tackle",
+      "time": 160.2166666666863,
+      "owner": 8
+    },
+    {
+      "event": "shot",
+      "time": 160.33333333335307,
+      "owner": null
+    },
+    {
+      "event": "goal",
+      "time": 160.65000000002,
+      "owner": null
+    },
+    {
+      "event": "kickoff",
+      "time": 160.65000000002,
+      "owner": 3
+    },
+    {
+      "event": "pass",
+      "time": 160.65000000002,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 163.56666666668897,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 163.83333333335585,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 170.38333333336107,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 170.75000000002802,
+      "owner": null
+    },
+    {
+      "event": "tackle",
+      "time": 171.50000000002862,
+      "owner": 9
+    },
+    {
+      "event": "shot",
+      "time": 171.61666666669538,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 171.88333333336226,
+      "owner": null
+    },
+    {
+      "event": "pass",
+      "time": 172.45000000002938,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 177.23333333336652,
+      "owner": null
+    },
+    {
+      "event": "save",
+      "time": 177.5833333333668,
+      "owner": 5
+    },
+    {
+      "event": "pass",
+      "time": 178.35000000003407,
+      "owner": null
+    },
+    {
+      "event": "shot",
+      "time": 178.9000000000345,
+      "owner": null
+    },
+    {
+      "event": "goal",
+      "time": 179.10000000003467,
+      "owner": null
+    },
+    {
+      "event": "kickoff",
+      "time": 179.10000000003467,
+      "owner": 8
+    },
+    {
+      "event": "pass",
+      "time": 179.10000000003467,
+      "owner": null
+    },
+    {
+      "event": "fulltime",
+      "time": 180,
+      "owner": 9
+    }
+  ]
+}

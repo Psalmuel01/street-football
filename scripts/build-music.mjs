@@ -1,0 +1,4 @@
+import {chromium} from 'playwright';
+import {mkdir,writeFile} from 'node:fs/promises';
+const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
+try{const page=await browser.newPage();await page.goto('http://localhost:5173');const result=await page.evaluate(async()=>{const {renderSoundtrack,encodeWave}=await import('/src/game/audio/composition.ts');const audio=await renderSoundtrack();const bytes=encodeWave(audio.channels,audio.sampleRate);let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));return {base64:btoa(binary),duration:audio.duration,peak:audio.peak};});await mkdir('artifacts/audio',{recursive:true});await writeFile('artifacts/audio/lagos-after-hours.wav',Buffer.from(result.base64,'base64'));console.log({duration:result.duration,peak:result.peak});}finally{await browser.close();}
