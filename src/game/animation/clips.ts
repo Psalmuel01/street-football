@@ -51,19 +51,18 @@ export function samplePose(name: ClipName, t: number): Pose {
     return p;
   }
   if (name === "walk" || name === "run" || name === "sprint") {
-    const walking=name==="walk", fast = name === "sprint",
-      phase = (t / (walking?1.0:fast ? 0.48 : 0.64)) * Math.PI * 2;
-    const amp = walking?.3:fast ? 0.86 : 0.62;
-    p.position[1] -= (walking?.008:.03) + Math.abs(Math.sin(phase)) * (walking?.008:.025);
-    r.spine[0] = fast ? 0.14 : 0.075;
-    r.chest[1] = Math.sin(phase) * 0.065;
+    const walking = name === "walk", fast = name === "sprint",
+      phase = (t / (walking ? 1.0 : fast ? 0.48 : 0.64)) * Math.PI * 2;
+    const amp = walking ? .3 : fast ? 0.86 : 0.62;
+    p.position[1] -= (walking ? .006 : .01) + Math.abs(Math.sin(phase)) * (walking ? .006 : .012);
+    r.spine[0] = fast ? 0.1 : 0.055;
     for (const [i, s] of ["L", "R"].entries()) {
       const wave = Math.sin(phase + i * Math.PI);
       r[`leg${s}` as BoneName][0] = -wave * amp;
-      r[`knee${s}` as BoneName][0] = (walking?.08:.18) + Math.max(0, -wave) * (walking?.45:1.15);
+      r[`knee${s}` as BoneName][0] = (walking ? .08 : .18) + Math.max(0, -wave) * (walking ? .45 : 1.15);
       r[`foot${s}` as BoneName][0] = Math.max(0, wave) * 0.2;
-      r[`arm${s}` as BoneName][0] = wave * (walking?.2:fast ? 0.7 : 0.45);
-      r[`elbow${s}` as BoneName][0] = walking?-.2:fast ? -1 : -0.7;
+      r[`arm${s}` as BoneName][0] = wave * (walking ? .2 : fast ? 0.7 : 0.45);
+      r[`elbow${s}` as BoneName][0] = walking ? -.2 : fast ? -1 : -0.7;
     }
     return p;
   }
@@ -123,20 +122,20 @@ export function samplePose(name: ClipName, t: number): Pose {
     r.armR[2] = 0.55 * progress;
     return p;
   }
-  if(name==='slide'){
-    const down=curve(t,[[0,0],[.16,1],[.48,1],[.8,.8],[1.05,.3],[1.25,0]]);
-    p.position[1]-=.58*down;
-    r.spine[0]=-.22*down;r.chest[1]=-.08*down;
-    r.legR[0]=-1.3*down;r.kneeR[0]=.15*down;r.footR[0]=.2*down;
-    r.legL[0]=-1.8*down;r.legL[2]=-.15*down;r.kneeL[0]=2.2*down;r.footL[0]=-.6*down;
-    r.armL=[.3*down,0,-.65*down];r.armR=[.25*down,0,.7*down];
-    r.elbowL[0]=r.elbowR[0]=-.5*down;
+  if (name === 'slide') {
+    const down = curve(t, [[0, 0], [.16, 1], [.48, 1], [.8, .8], [1.05, .3], [1.25, 0]]);
+    p.position[1] -= .58 * down;
+    r.spine[0] = -.22 * down; r.chest[1] = -.08 * down;
+    r.legR[0] = -1.3 * down; r.kneeR[0] = .15 * down; r.footR[0] = .2 * down;
+    r.legL[0] = -1.8 * down; r.legL[2] = -.15 * down; r.kneeL[0] = 2.2 * down; r.footL[0] = -.6 * down;
+    r.armL = [.3 * down, 0, -.65 * down]; r.armR = [.25 * down, 0, .7 * down];
+    r.elbowL[0] = r.elbowR[0] = -.5 * down;
     return p;
   }
-  if(name==='stumble'){
-    const a=curve(t,[[0,0],[.16,1],[.32,.85],[.75,0]]);
-    p.position[1]-=.12*a;r.spine[0]=.35*a;r.legL[0]=-.25*a;r.kneeL[0]=.5*a;r.legR[0]=.15*a;r.kneeR[0]=.3*a;
-    r.armL[2]=-.55*a;r.armR[2]=.55*a;r.elbowL[0]=r.elbowR[0]=-.65*a;
+  if (name === 'stumble') {
+    const a = curve(t, [[0, 0], [.16, 1], [.32, .85], [.75, 0]]);
+    p.position[1] -= .12 * a; r.spine[0] = .35 * a; r.legL[0] = -.25 * a; r.kneeL[0] = .5 * a; r.legR[0] = .15 * a; r.kneeR[0] = .3 * a;
+    r.armL[2] = -.55 * a; r.armR[2] = .55 * a; r.elbowL[0] = r.elbowR[0] = -.65 * a;
     return p;
   }
   if (name === "skill") {

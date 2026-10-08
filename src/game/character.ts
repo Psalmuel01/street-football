@@ -7,7 +7,7 @@ import { buildClips, type ClipName } from "./animation/clips";
 import { actionWeight, type PlayerAction } from "./animation/actions";
 
 let template: THREE.Group | null = null;
-let crowdTemplate:THREE.Group|null=null;
+let crowdTemplate: THREE.Group | null = null;
 let clips = buildClips();
 export async function prepareCharacterAsset() {
   try {
@@ -23,7 +23,8 @@ export async function prepareCharacterAsset() {
 }
 export type CharacterRig = {
   root: THREE.Group;
-  footPlants?: {points:(THREE.Vector3|null)[];stance:boolean[];time:number;position:THREE.Vector3};
+  footPlants?: { points: (THREE.Vector3 | null)[]; stance: boolean[]; time: number; position: THREE.Vector3 };
+  authoredPose?: { bone: THREE.Bone; rotation: THREE.Quaternion; position: THREE.Vector3 }[];
   hips: THREE.Bone;
   head: THREE.Bone;
   arms: THREE.Bone[];
@@ -41,11 +42,11 @@ export function createCharacter(
   index = 0,
   detail = true,
   jerseyNumber = (index % 5) + 7,
-  goalkeeper = jerseyNumber===1||jerseyNumber===20,
+  goalkeeper = jerseyNumber === 1 || jerseyNumber === 20,
 ): CharacterRig {
   template ??= buildFootballer().root;
-  if(!detail)crowdTemplate??=buildFootballer(false).root;
-  const root = clone(detail?template:crowdTemplate!) as THREE.Group,
+  if (!detail) crowdTemplate ??= buildFootballer(false).root;
+  const root = clone(detail ? template : crowdTemplate!) as THREE.Group,
     bones = {} as CharacterRig["bones"];
   let kit!: THREE.MeshStandardMaterial;
   root.traverse((node) => {
@@ -59,7 +60,7 @@ export function createCharacter(
         : node.material;
       if (firstMaterial.name === "hair" && index % 3 !== 0) {
         node.geometry = node.geometry.clone();
-        node.userData.ownedGeometry=true;
+        node.userData.ownedGeometry = true;
         const pos = node.geometry.attributes.position;
         for (let v = 0; v < pos.count; v++) {
           const y = pos.getY(v);
@@ -67,9 +68,9 @@ export function createCharacter(
             const extra =
               index % 3 === 1
                 ? 0.024 +
-                  0.008 *
-                    Math.sin(pos.getX(v) * 210) *
-                    Math.cos(pos.getZ(v) * 180)
+                0.008 *
+                Math.sin(pos.getX(v) * 210) *
+                Math.cos(pos.getZ(v) * 180)
                 : 0.012;
             pos.setY(v, y + extra * Math.min(1, (y - 1.785) / 0.04));
           }
@@ -83,13 +84,13 @@ export function createCharacter(
         (material) => {
           const m = material.clone();
           detailedMaterial(m);
-          if(m.name==="kit-sleeve")m.color.set(color);
+          if (m.name === "kit-sleeve") m.color.set(color);
           if (m.name === "kit") {
             m.color.set(color);
-            m.map=kitPattern(color);
+            m.map = kitPattern(color);
             kit = m;
           }
-          if(!detail&&m.name==='socks')m.color.set(skinTones[index%skinTones.length]);
+          if (!detail && m.name === 'socks') m.color.set(skinTones[index % skinTones.length]);
           if (m.name === "skin")
             m.color.set(skinTones[index % skinTones.length]);
           return m;
@@ -98,19 +99,19 @@ export function createCharacter(
       node.material = Array.isArray(node.material) ? result : result[0];
     }
   });
-  if(detail){
+  if (detail) {
     // Instanced short twists keep the silhouette irregular without one draw per curl.
-    const hairMaterial=new THREE.MeshStandardMaterial({color:index%4===2?'#251e18':'#141512',roughness:.98});
-    const count=index%3===0?100:60;
-    const curls=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),hairMaterial,count);
-    const transform=new THREE.Object3D();
-    for(let n=0;n<count;n++){
-      const theta=n*2.39996,r=Math.sqrt((n+.5)/count)*.086;
-      transform.position.set(Math.cos(theta)*r,.127+Math.sqrt(Math.max(0,1-r*r/.009))*.048,Math.sin(theta)*r);
-      transform.scale.set(.014,.016+(index%3===0?.017:.004)*(1-r/.12),.013);
-      transform.rotation.set(n*.7,n*.9,n*.2);transform.updateMatrix();curls.setMatrixAt(n,transform.matrix);
+    const hairMaterial = new THREE.MeshStandardMaterial({ color: index % 4 === 2 ? '#251e18' : '#141512', roughness: .98 });
+    const count = index % 3 === 0 ? 100 : 60;
+    const curls = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), hairMaterial, count);
+    const transform = new THREE.Object3D();
+    for (let n = 0; n < count; n++) {
+      const theta = n * 2.39996, r = Math.sqrt((n + .5) / count) * .086;
+      transform.position.set(Math.cos(theta) * r, .127 + Math.sqrt(Math.max(0, 1 - r * r / .009)) * .048, Math.sin(theta) * r);
+      transform.scale.set(.014, .016 + (index % 3 === 0 ? .017 : .004) * (1 - r / .12), .013);
+      transform.rotation.set(n * .7, n * .9, n * .2); transform.updateMatrix(); curls.setMatrixAt(n, transform.matrix);
     }
-    curls.castShadow=true;bones.head.add(curls);
+    curls.castShadow = true; bones.head.add(curls);
   }
   // Original number + chest crest on the deforming shirt's chest bone.
   if (detail) {
@@ -130,7 +131,7 @@ export function createCharacter(
       depthWrite: false,
       roughness: 0.9,
     });
-    material.userData.ownedTexture=true;
+    material.userData.ownedTexture = true;
     const front = new THREE.Mesh(
       new THREE.PlaneGeometry(0.145, 0.145),
       material,
@@ -162,7 +163,7 @@ export function createCharacter(
     }
   }
   // Height and build variation are cosmetic only; collision/statistics are unchanged.
-  root.scale.set([.93,1.05,.99,1.08,.95][index%5], [.98,1.025,1.0,.96,1.03][index%5], [.95,1.04,.98,1.05,.96][index%5]);
+  root.scale.set([.93, 1.05, .99, 1.08, .95][index % 5], [.98, 1.025, 1.0, .96, 1.03][index % 5], [.95, 1.04, .98, 1.05, .96][index % 5]);
   const mixer = new THREE.AnimationMixer(root);
   const actions = new Map<ClipName, THREE.AnimationAction>();
   for (const clip of clips) {
@@ -187,11 +188,11 @@ export function createCharacter(
     actions,
   };
 }
-export function disposeCharacter(rig:CharacterRig){
-  rig.mixer.stopAllAction();rig.mixer.uncacheRoot(rig.root);
-  const materials=new Set<THREE.Material>();const textures=new Set<THREE.Texture>();
-  rig.root.traverse(node=>{if(node instanceof THREE.Mesh){if(node instanceof THREE.InstancedMesh)node.dispose();if(!(node instanceof THREE.SkinnedMesh)||node.userData.ownedGeometry)node.geometry.dispose();for(const m of Array.isArray(node.material)?node.material:[node.material]){materials.add(m);if(m.userData.ownedTexture&&(m as THREE.MeshStandardMaterial).map)textures.add((m as THREE.MeshStandardMaterial).map!);}}});
-  materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());
+export function disposeCharacter(rig: CharacterRig) {
+  rig.mixer.stopAllAction(); rig.mixer.uncacheRoot(rig.root);
+  const materials = new Set<THREE.Material>(); const textures = new Set<THREE.Texture>();
+  rig.root.traverse(node => { if (node instanceof THREE.Mesh) { if (node instanceof THREE.InstancedMesh) node.dispose(); if (!(node instanceof THREE.SkinnedMesh) || node.userData.ownedGeometry) node.geometry.dispose(); for (const m of Array.isArray(node.material) ? node.material : [node.material]) { materials.add(m); if (m.userData.ownedTexture && (m as THREE.MeshStandardMaterial).map) textures.add((m as THREE.MeshStandardMaterial).map!); } } });
+  materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose());
 }
 /** Bone evaluation is driven by simulation time, so pause and frame-rate changes cannot release a ball. */
 export function animateCharacter(
@@ -202,8 +203,13 @@ export function animateCharacter(
   keeper = false,
   action: PlayerAction | null = null,
   stride?: number,
-  motion?:{receive:number;recovery:number;vx:number;vy:number;facingX:number;facingY:number},
+  motion?: { receive: number; recovery: number; vx: number; vy: number; facingX: number; facingY: number },
 ) {
+  // PropertyMixer skips identical samples. Restore the last unmodified sample before
+  // evaluating so procedural lean/IK never become the next frame's base pose.
+  for (const pose of rig.authoredPose ?? []) {
+    pose.bone.quaternion.copy(pose.rotation); pose.bone.position.copy(pose.position);
+  }
   for (const clip of rig.actions.values()) {
     clip.enabled = true;
     clip.paused = false;
@@ -215,7 +221,7 @@ export function animateCharacter(
     clip.setEffectiveWeight(weight);
   };
   const running = Math.min(1, speed / 1.0),
-    jogging=THREE.MathUtils.clamp((speed-1.8)/2.2,0,1),
+    jogging = THREE.MathUtils.clamp((speed - 1.8) / 2.2, 0, 1),
     fast = THREE.MathUtils.clamp((speed - 6) / 2, 0, 1);
   const weight = action && !action.turnRemaining ? actionWeight(action) : 0;
   set(
@@ -224,7 +230,7 @@ export function animateCharacter(
     time % (keeper ? 2 : 4),
   );
   const cycle = stride ?? time * (speed > 7 ? 2.1 : 1.6) + phase;
-  set("walk",running*(1-jogging)*(1-weight),cycle%1);
+  set("walk", running * (1 - jogging) * (1 - weight), cycle % 1);
   set("run", running * jogging * (1 - fast) * (1 - weight), (cycle % 1) * 0.64);
   set("sprint", running * fast * (1 - weight), (cycle % 1) * 0.48);
   if (action) {
@@ -237,54 +243,66 @@ export function animateCharacter(
     set(name, weight, action.elapsed);
   }
   rig.mixer.update(0);
-  if(motion&&!action){
-    const lateral=motion.vx*motion.facingY-motion.vy*motion.facingX;
-    const forward=motion.vx*motion.facingX+motion.vy*motion.facingY;
-    rig.bones.spine.rotation.z-=THREE.MathUtils.clamp(lateral*.045,-.23,.23);
-    rig.bones.spine.rotation.x+=THREE.MathUtils.clamp(forward*.009,-.10,.08);
-    rig.bones.chest.rotation.y+=THREE.MathUtils.clamp(lateral*.025,-.15,.15);
-    if(motion.recovery>0){rig.bones.spine.rotation.x+=.23;rig.arms[0].rotation.z-=.35;rig.arms[1].rotation.z+=.35;}
-    if(motion.receive>0){const weight=motion.receive/.18;rig.legs[1].rotation.x-=.35*weight;rig.legs[1].rotation.y+=.3*weight;rig.knees[1].rotation.x+=.35*weight;rig.arms[0].rotation.z-=.2*weight;}
+  if (!rig.authoredPose) rig.authoredPose = Object.values(rig.bones).map(bone => ({bone, rotation: bone.quaternion.clone(), position: bone.position.clone()}));
+  else for (const pose of rig.authoredPose) { pose.rotation.copy(pose.bone.quaternion); pose.position.copy(pose.bone.position); }
+  if (motion && !action) {
+    const lateral = motion.vx * motion.facingY - motion.vy * motion.facingX;
+    const forward = motion.vx * motion.facingX + motion.vy * motion.facingY;
+    rig.bones.spine.rotation.z -= THREE.MathUtils.clamp(lateral * .045, -.23, .23);
+    rig.bones.spine.rotation.x += THREE.MathUtils.clamp(forward * .009, -.10, .08);
+    if (motion.recovery > 0) { rig.bones.spine.rotation.x += .08 * Math.min(1,motion.recovery/.3); rig.arms[0].rotation.z -= .35; rig.arms[1].rotation.z += .35; }
+    if (motion.receive > 0) { const weight = Math.min(1,motion.receive / .18); rig.legs[1].rotation.x -= .35 * weight; rig.legs[1].rotation.y += .3 * weight; rig.knees[1].rotation.x += .35 * weight; rig.arms[0].rotation.z -= .2 * weight; }
   }
-  // Lock stance feet in world space. Reset on replay seeks / teleports, never accumulate rotations.
-  if(!action&&speed>.15)rig.hips.position.y-=Math.min(.075,speed*.018);
-  const planting=!action||action.kind==='pass'||action.kind==='shot'||!!action.turnRemaining;
+  // Locomotion owns the lower body. Feet trace a stance/swing cycle and stance
+  // anchors stay in world space, including during a turn. Action clips retain
+  // their authored contact pose.
+  const planting = !action || ['pass','shot','tackle'].includes(action.kind);
+  const travel = THREE.MathUtils.smoothstep(speed,0,1);
+  if (!action && !keeper) rig.hips.position.y = THREE.MathUtils.lerp(.96,.91-.02*fast,travel);
   rig.root.updateMatrixWorld(true);
-  let plants=rig.footPlants;
-  if(!plants||time<plants.time||rig.root.position.distanceTo(plants.position)>2){plants=rig.footPlants={points:[null,null],stance:[false,false],time,position:rig.root.position.clone()};}
-  for(let i=0;i<2;i++){
-    const f=((cycle+i*.5)%1+1)%1,stance=speed>4?.34:.42;
-    const plant=planting&&(action?i===0:f<stance||speed<.15);
-    const foot=rig.bones[i===0?'footL':'footR'];
-    if(!planting){plants.points[i]=null;plants.stance[i]=false;continue;}
+  let plants = rig.footPlants;
+  if (!plants || time < plants.time || rig.root.position.distanceTo(plants.position) > 2) { plants = rig.footPlants = { points: [null, null], stance: [false, false], time, position: rig.root.position.clone() }; }
+  for (let i = 0; i < 2; i++) {
+    const f = ((cycle + i * .5) % 1 + 1) % 1, stance = THREE.MathUtils.lerp(.42,.26,THREE.MathUtils.clamp(speed/6,0,1));
+    const plant = planting && (action ? i === 0 : f < stance || speed < .15);
+    const foot = rig.bones[i === 0 ? 'footL' : 'footR'];
+    if (!planting) { plants.points[i] = null; plants.stance[i] = false; continue; }
     // Keep the kicking leg's authored boot/ball contact.
-    if(action&&i===1){plants.points[i]=null;plants.stance[i]=false;continue;}
-    const strideLength=1.1+Math.min(1,speed/8)*1.3;
-    const reach=Math.min(.53,strideLength*stance*.5);
-    const swing=(f-stance)/(1-stance);
-    let z=speed<.15?.025:plant?reach*(1-2*f/stance):-reach+2*reach*(swing*swing*(3-2*swing));
-    let y=.09+(plant?0:Math.sin(Math.max(0,swing)*Math.PI)*Math.min(.23,.07+speed*.02));
-    if(plant){
-      if(!plants.stance[i]||!plants.points[i]){
-        const point=new THREE.Vector3(rig.legs[i].position.x,y,z);rig.root.localToWorld(point);point.y=.09*rig.root.scale.y;plants.points[i]=point;
+    if (action && i === 1) { plants.points[i] = null; plants.stance[i] = false; continue; }
+    const strideLength = 1.1 + Math.min(1, speed / 8) * 1.3;
+    const reach = Math.min(.32, strideLength * stance * .5) * travel;
+    const swing = (f - stance) / (1 - stance);
+    let z = speed < .15 ? .025 : plant ? reach * (1 - 2 * f / stance) : -reach + 2 * reach * (swing * swing * (3 - 2 * swing));
+    let y = .09 + (plant ? 0 : Math.sin(Math.max(0, swing) * Math.PI) * Math.min(.23, .07 + speed * .02) * travel);
+    let lateralTarget = 0;
+    if (plant) {
+      if (!plants.stance[i] || !plants.points[i]) {
+        const point = new THREE.Vector3(rig.legs[i].position.x, y, z); rig.root.localToWorld(point); point.y = .09 * rig.root.scale.y; plants.points[i] = point;
       }
-      const point=rig.root.worldToLocal(plants.points[i]!.clone());z=point.z;y=point.y;
+      const point = rig.root.worldToLocal(plants.points[i]!.clone()); z = point.z; y = point.y;
       // Release an unreachable anchor rather than hyperextending a knee during a sharp cut.
-      if(Math.abs(z)>.58||Math.abs(point.x-rig.legs[i].position.x)>.24){plants.points[i]=null;plants.stance[i]=false;continue;}
-      rig.legs[i].rotation.z=THREE.MathUtils.clamp(Math.atan2(point.x-rig.legs[i].position.x,rig.hips.position.y-y),-.22,.22);
-    }else {plants.points[i]=null;rig.legs[i].rotation.z=0;}
-    plants.stance[i]=plant;
-    const dy=y-(rig.hips.position.y-.005),d=THREE.MathUtils.clamp(Math.hypot(dy,z),.45,.858),upper=.44,lower=.425;
-    const thigh=-Math.atan2(z,-dy)-Math.acos(THREE.MathUtils.clamp((upper*upper+d*d-lower*lower)/(2*upper*d),-1,1));
-    const knee=Math.PI-Math.acos(THREE.MathUtils.clamp((upper*upper+lower*lower-d*d)/(2*upper*lower),-1,1));
-    rig.legs[i].rotation.x=thigh;rig.legs[i].rotation.y=0;rig.knees[i].rotation.set(knee,0,0);foot.rotation.set(-thigh-knee,0,-rig.legs[i].rotation.z);
+      if (Math.abs(z) > .58 || Math.abs(point.x - rig.legs[i].position.x) > .24) { plants.points[i] = null; plants.stance[i] = false; continue; }
+      lateralTarget = point.x - rig.legs[i].position.x;
+    } else { plants.points[i] = null; rig.legs[i].rotation.z = 0; }
+    plants.stance[i] = plant;
+    const dy = y - (rig.hips.position.y - .005), vertical = Math.hypot(dy,lateralTarget);
+    // The ankle bind offset is 25 mm forward, not a perfectly vertical shin.
+    // Account for it in the solver instead of letting the planted foot orbit.
+    const upper = rig.knees[i].position.length(), lower = foot.position.length();
+    const d = THREE.MathUtils.clamp(Math.hypot(vertical,z), .45, upper+lower-.001);
+    const thigh = -Math.atan2(z,vertical) - Math.acos(THREE.MathUtils.clamp((upper*upper+d*d-lower*lower)/(2*upper*d),-1,1));
+    const knee = Math.PI-Math.acos(THREE.MathUtils.clamp((upper*upper+lower*lower-d*d)/(2*upper*lower),-1,1))+Math.atan2(foot.position.z,-foot.position.y);
+    const roll = THREE.MathUtils.clamp(Math.atan2(lateralTarget,-dy),-.22,.22);
+    rig.legs[i].quaternion.setFromEuler(new THREE.Euler(thigh,0,roll,'ZXY'));
+    rig.knees[i].rotation.set(knee,0,0);
+    foot.quaternion.copy(rig.legs[i].quaternion).multiply(rig.knees[i].quaternion).invert();
   }
-  if(action&&['slide','stumble','tackle'].includes(action.kind)){
+  if (action && ['slide', 'stumble', 'tackle'].includes(action.kind)) {
     rig.root.updateMatrixWorld(true);
-    const sole=Math.min(...['footL','footR'].map(name=>rig.bones[name as BoneName].localToWorld(new THREE.Vector3(0,-.045,.075)).y));
-    if(sole<.035)rig.hips.position.y+=(.035-sole)/rig.root.scale.y;
+    const sole = Math.min(...['footL', 'footR'].map(name => rig.bones[name as BoneName].localToWorld(new THREE.Vector3(0, -.045, .075)).y));
+    if (sole < .035) rig.hips.position.y += (.035 - sole) / rig.root.scale.y;
   }
-  plants.time=time;plants.position.copy(rig.root.position);
+  plants.time = time; plants.position.copy(rig.root.position);
 
 }
 
@@ -295,33 +313,33 @@ export class SquadPreview {
   rigs: CharacterRig[] = [];
   motion: "idle" | "run" | "shot" | "tackle" | "catch" = "idle";
   motionStart = 0;
-  constructor(host: HTMLElement, color: string, showcase=false) {
+  constructor(host: HTMLElement, color: string, showcase = false) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     this.renderer.setClearColor("#1a2824", 0);
-    this.renderer.shadowMap.enabled=true;
-    this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     host.append(this.renderer.domElement);
     this.scene.add(new THREE.HemisphereLight("#e9f2ff", "#4d4738", 2));
     const key = new THREE.DirectionalLight("#ffdfac", 3);
     key.position.set(-3, 5, 5);
-    key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-4;key.shadow.camera.right=4;key.shadow.camera.top=4;key.shadow.camera.bottom=-4;key.shadow.bias=-.0005;this.scene.add(key);
+    key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.camera.left = -4; key.shadow.camera.right = 4; key.shadow.camera.top = 4; key.shadow.camera.bottom = -4; key.shadow.bias = -.0005; this.scene.add(key);
     const rim = new THREE.DirectionalLight("#b0ded3", 3);
     rim.position.set(3, 3, -3);
     this.scene.add(rim);
-    this.camera.position.set(0, 1.25, showcase?4.6:4.75);
+    this.camera.position.set(0, 1.25, showcase ? 4.6 : 4.75);
     this.camera.lookAt(0, 1.02, 0);
     for (let i = 0; i < 3; i++) {
-      const shade=showcase?["#5cc5b5",color,"#e8815d"][i]:color;
+      const shade = showcase ? ["#5cc5b5", color, "#e8815d"][i] : color;
       const rig = createCharacter(shade, i + 1);
-      rig.root.position.set((i - 1) * (showcase?.88:.7), 0, i === 1 ? .4 : 0);
+      rig.root.position.set((i - 1) * (showcase ? .88 : .7), 0, i === 1 ? .4 : 0);
       rig.root.rotation.y = (i - 1) * -0.2;
       this.rigs.push(rig);
       this.scene.add(rig.root);
     }
-    const floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.ShadowMaterial({opacity:.24}));floor.rotation.x=-Math.PI/2;floor.position.y=-.005;floor.receiveShadow=true;this.scene.add(floor);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.ShadowMaterial({ opacity: .24 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -.005; floor.receiveShadow = true; this.scene.add(floor);
     new ResizeObserver(() => {
       if (!host.clientWidth || !host.clientHeight) return;
       this.renderer.setSize(host.clientWidth, host.clientHeight);
@@ -330,7 +348,7 @@ export class SquadPreview {
     }).observe(host);
   }
   setColor(color: string) {
-    this.rigs.forEach((r) => {r.kit.color.set(color);r.kit.map=kitPattern(color);r.root.traverse(o=>{if(o instanceof THREE.Mesh){const materials=Array.isArray(o.material)?o.material:[o.material];materials.forEach(m=>{if(m.name==="kit-sleeve" && m instanceof THREE.MeshStandardMaterial)m.color.set(color);});}});});
+    this.rigs.forEach((r) => { r.kit.color.set(color); r.kit.map = kitPattern(color); r.root.traverse(o => { if (o instanceof THREE.Mesh) { const materials = Array.isArray(o.material) ? o.material : [o.material]; materials.forEach(m => { if (m.name === "kit-sleeve" && m instanceof THREE.MeshStandardMaterial) m.color.set(color); }); } }); });
   }
   setMotion(motion: typeof this.motion, time: number) {
     this.motion = motion;
@@ -346,12 +364,12 @@ export class SquadPreview {
         this.motion === "idle" || this.motion === "run" || t > duration
           ? null
           : ({
-              kind: this.motion,
-              elapsed: t,
-              duration,
-              side: 1,
-              contacted: t > 0.12,
-            } as PlayerAction);
+            kind: this.motion,
+            elapsed: t,
+            duration,
+            side: 1,
+            contacted: t > 0.12,
+          } as PlayerAction);
       animateCharacter(
         r,
         time,

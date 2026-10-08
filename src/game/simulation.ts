@@ -583,7 +583,11 @@ export class Match {
       if (mag > 0.12 && !p.action) {
         const heading=Math.atan2(p.facingY,p.facingX),target=Math.atan2(my,mx),delta=Math.atan2(Math.sin(target-heading),Math.cos(target-heading));
         const turn=Math.max(-7*dt,Math.min(7*dt,delta));p.facingX=Math.cos(heading+turn);p.facingY=Math.sin(heading+turn);
-        const braking=Math.max(.15,Math.cos(delta));mx*=braking;my*=braking;
+        const braking=Math.max(0,Math.cos(delta));
+        // Brake into a cut, then accelerate along the body's new heading.
+        // Moving toward raw input before the body turns caused backward skating.
+        if(this.passFlight?.receiver===p.id){mx*=Math.max(.15,braking);my*=Math.max(.15,braking);}
+        else {mx=p.facingX*Math.min(1,mag)*braking;my=p.facingY*Math.min(1,mag)*braking;}
       }
       p.stamina = Math.max(
         0,
