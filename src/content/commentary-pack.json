@@ -1,0 +1,23 @@
+{
+ "kickoff":["Oya, make we start. Play ball!","Everybody ready? Oya, let's go."],
+ "goal":["Na goal! What a finish!","Omo, see goal! He place am well.","Yes! That one enter clean!"],
+ "save":["Good hands from the keeper.","Keeper hold am. No second chance."],
+ "big-save":["Ah! Keeper, you save your people there!","How he take save that one? Correct keeper!","Omo! That save big well well!"],
+ "miss":["Ah ah, you for bury that one!","That chance don go. Head up, keep playing.","He get space, but the finish no follow."],
+ "near-goal":["Chai! Small thing remain!","That one nearly enter o!","Just outside! The keeper don already fear."],
+ "tackle":["Clean tackle. Play on!","He time that one well."],
+ "hard-tackle":["Strong challenge! He get the ball first.","Correct sliding tackle. But who go collect the loose ball?"],
+ "foul":["Referee don blow. You catch the leg, not the ball.","Too late! That's a foul.","Easy now. You cannot go through the player like that."],
+ "free-kick":["Free kick. Give them space.","Oya, arrange yourselves. Free kick."],
+ "penalty":["Penalty! The foul happen inside the area.","Referee point to the spot. Na penalty."],
+ "skill":["See footwork!","Soft touch. Keep am moving."],
+ "nutmeg":["Ah! Between the legs!","Omo, he sell am! Ball pass through!","See nutmeg! The crowd don wake up!"],
+ "late-lead":["They don take the lead! Time no plenty again!","Late goal! Can they hold on now?"],
+ "late-winner":["That late goal settle am! Bragging rights secured!","They leave am late, but they carry the win!"],
+ "close-match":["This game tight o. One chance fit change everything.","Nobody fit relax now. The score still close."],
+ "substitution":["Fresh legs don enter. Make we see wetin go change.","Change of personnel. Oya, make your impact."],
+ "fulltime":["Full time. Well played, everybody.","That's the final whistle. Respect to both sides."],
+ "atmosphere":["Your people dey watch. Keep the ball moving.","Oya, communicate! Help your teammate."],
+ "pass":["Good ball. Move into space.","Correct pass. Keep it simple."],
+ "shot":["He don shoot!","Chance to shoot!"]
+}

@@ -210,7 +210,7 @@ export function buildFootballer(detail=true): FootballerAsset {
       [0, 1.565, 0, 0.078, 0.071],
     ],
     0,
-    blend("spine", "chest", 1.15, 1.47),
+    (y)=>y<1.23?blend("pelvis","spine",1.05,1.23)(y):blend("spine", "chest", 1.23, 1.47)(y),
     24,
   );
   loft(
@@ -284,7 +284,7 @@ export function buildFootballer(detail=true): FootballerAsset {
         [x, 1.0, 0, 0.095, 0.11],
       ],
       2,
-      rigid(leg),
+      blend(leg,"pelvis",.88,1.04),
       20,
     );
     loft(

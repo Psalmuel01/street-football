@@ -38,18 +38,18 @@ test('replay uses independent bounded snapshots and freezes when paused',()=>{
 });
 test('snapshots preserve animation state without sharing player references',()=>{const m=playing();m.beginAction(m.players[3],'shot');const frame=snapshot(m);m.players[3].action!.elapsed=.3;assert.equal(frame.players[3].action!.elapsed,0);});
 
-test('a successful tackler can escape and pass while the loser recovers',()=>{
+test('a standing tackle retains its recovery pose and prevents an immediate counter-steal',()=>{
  const m=playing();m.lock=0;m.owner=8;m.active=3;
- const winner=m.players[3],loser=m.players[8];winner.x=0;winner.y=0;loser.x=1.25;loser.y=0;m.ball.x=loser.x;m.ball.y=0;
- for(const p of m.players)if(p.id!==3&&p.id!==8){p.x=-25;p.y=p.team===0?-15:15;}
- m.step(1/60,{...idle(),tackle:true});for(let i=0;i<8;i++)m.step(1/60,idle());
- assert.equal(m.owner,3);assert.equal(winner.action,null);assert.equal(winner.cooldown,0);assert.ok(loser.recovery>0);assert.ok(loser.cooldown>.5);
- const x=winner.x;for(let i=0;i<18;i++){m.tackle(loser);m.step(1/60,{...idle(),x:-1});assert.equal(m.owner,3,'winner must not be re-stolen during recovery');}
- assert.ok(winner.x<x-.8,'winner can move immediately');m.step(1/60,{...idle(),pass:true});assert.equal(winner.pendingKick?.kind,'pass');
+ const winner=m.players[3],loser=m.players[8];Object.assign(winner,{x:0,y:0});Object.assign(loser,{x:1.25,y:0});m.ball.x=1.25;m.ball.y=0;
+ m.tackle(winner);m.advanceActions(.14);
+ assert.equal(m.owner,3);assert.equal(winner.action?.kind,'tackle');assert.ok(loser.recovery>0);assert.ok(loser.cooldown>.5);
+ m.tackle(loser);assert.equal(loser.action?.kind,'stumble');assert.equal(m.owner,3);
+ m.advanceActions(.6);assert.equal(winner.action,null);
 });
 test('overlapping tackle contacts cannot ping-pong possession',()=>{
  const m=playing();m.lock=0;m.owner=8;m.active=3;
  Object.assign(m.players[3],{x:0,y:0});Object.assign(m.players[8],{x:1.2,y:0});Object.assign(m.players[9],{x:0,y:1});
+ m.ball.x=1.2;m.ball.y=0;
  m.beginAction(m.players[3],'tackle');m.beginAction(m.players[9],'tackle');m.advanceActions(.14);
  assert.equal(m.owner,3);assert.equal(m.tackles[0],1);assert.equal(m.tackles[1],0);assert.ok(m.lock>.5);
 });

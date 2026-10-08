@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "test": "tsx --test tests/*.test.ts",
     "assets:character": "node scripts/build-character.mjs",
-    "test:animation": "node scripts/animation-check.mjs"
+    "test:animation": "node scripts/animation-check.mjs",
+    "voices:plan": "node scripts/build-native-voices.mjs --dry-run",
+    "voices:build": "node scripts/build-native-voices.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"

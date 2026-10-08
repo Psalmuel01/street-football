@@ -1,2 +1,4 @@
-export const callouts:Record<string,string[]>={kickoff:['kickoff-1','kickoff-2'],goal:['goal-1','goal-2'],save:['save-1','save-2'],pass:['pass-1','pass-2'],tackle:['tackle-1'],skill:['skill-1'],shot:['shot-1'],substitution:['substitution-1'],fulltime:['fulltime-1'],atmosphere:['atmosphere-1','atmosphere-2']};
-export const captions:Record<string,string>={'kickoff-1':'Oya! Play ball! No dulling!','kickoff-2':'Oya, make we go! Show your skill!','goal-1':'Na goal! Omo! What a finish!','goal-2':'E choke! Na correct goal be that!','save-1':'Ah! Keeper! You too much!','save-2':'See save! Safe hands!','pass-1':'Correct pass! Carry go!','pass-2':'Oya, pass am! I dey here!','tackle-1':'Collect am! No shaking!','skill-1':'Comot body! See footwork!','shot-1':'Fire am! Oya!','substitution-1':'Fresh legs don enter! Oya, show them!','fulltime-1':'Game don finish! Respect the game. Well played!','atmosphere-1':'No dulling! Everybody get game!','atmosphere-2':'Oya! Your area dey watch you!'};
+import pack from './commentary-pack.json';
+export const callouts:Record<string,string[]>={};
+export const captions:Record<string,string>={};
+for(const [event,lines] of Object.entries(pack)){callouts[event]=lines.map((text,i)=>{const id=`${event}-${i+1}`;captions[id]=text;return id;});}

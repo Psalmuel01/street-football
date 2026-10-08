@@ -1,0 +1,17 @@
+{
+  "feet": {
+    "maxSlip": 0.0015873202922034313,
+    "lockedFrames": 216,
+    "minFoot": 0.07401064147955361
+  },
+  "runtimeErrors": [],
+  "checks": [
+    "clean slide",
+    "visible recovery",
+    "foul decision",
+    "CPU free kick",
+    "human free kick",
+    "turning",
+    "pause"
+  ]
+}

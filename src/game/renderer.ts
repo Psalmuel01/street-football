@@ -34,6 +34,8 @@ export class PitchRenderer {
   camera = new THREE.PerspectiveCamera(43, 1, 0.1, 250);
   players: THREE.Group[] = [];
   rigs: CharacterRig[] = [];
+  official?:CharacterRig;
+  private crowdStart=0;
   ball: THREE.Mesh;
   ring: THREE.Mesh;
   clock = 0;
@@ -412,6 +414,17 @@ export class PitchRenderer {
     this.camera.fov = w / h < 1.2 ? 58 : 43;
     this.camera.updateProjectionMatrix();
   }
+  showDecision(decision:{team:number;x:number;y:number}|null,paused:boolean){
+    if(!this.official){this.official=createCharacter('#d8e3df',2);this.official.kit.map=null;this.official.root.position.set(0,0,-18.6);this.scene.add(this.official.root);}
+    const rig=this.official;rig.root.visible=this.matchView;
+    if(paused)return;
+    const target=decision?decision.x:0;rig.root.position.x+=(target-rig.root.position.x)*.07;
+    rig.root.rotation.y=decision?(decision.team===0?Math.PI/2:-Math.PI/2):0;
+    animateCharacter(rig,this.clock,Math.abs(target-rig.root.position.x)>.3?2:0,0);
+    if(decision){rig.arms[1].rotation.set(-1.35,0,.15);rig.elbows[1].rotation.x=-.1;rig.arms[0].rotation.x=-.7;rig.elbows[0].rotation.x=-1.5;}
+  }
+  private crowdMood='goal';
+  react(kind:string,intensity=1){if(['goal','late-lead','late-winner','big-save','nutmeg','near-goal','miss','foul','hard-tackle'].includes(kind)){this.crowdMood=kind;this.crowdStart=this.street.time;this.cheerUntil=this.street.time+2.2*intensity;}}
   draw(match: MatchFrame, dt: number, replay=false) {
     this.clock = match.presentationTime;
     this.neighbourhood.update(dt,match.players,match.state==='PAUSED'||match.state==='FULL_TIME',this.wet);
@@ -419,7 +432,7 @@ export class PitchRenderer {
     this.atmosphere.update(dt,match.state==='PAUSED'||match.state==='FULL_TIME');
     const total=match.score[0]+match.score[1];
     if(total>this.lastScore)this.cheerUntil=this.street.time+3;this.lastScore=total;
-    this.spectators.forEach((rig,i)=>{if(!rig.root.visible)return;const cheering=this.street.time<this.cheerUntil && (i%4!==0);animateCharacter(rig,this.street.time,0,i,false,cheering?{kind:'celebrate',elapsed:(this.street.time+i*.13)%2.5,duration:2.5,side:1,contacted:true}:null);if(!cheering){rig.head.rotation.y+=Math.sin(this.street.time*.4+i)*.18;
+    this.spectators.forEach((rig,i)=>{if(!rig.root.visible)return;const cheering=this.street.time<this.cheerUntil && (i%4!==0);animateCharacter(rig,this.street.time,0,i,false,cheering?{kind:'celebrate',elapsed:Math.max(0,Math.min(2.49,this.street.time-this.crowdStart-(i%5)*.06)),duration:2.5,side:1,contacted:true}:null);if(cheering&&['miss','near-goal','foul'].includes(this.crowdMood)){rig.arms[0].rotation.set(-1.8,0,-.25);rig.arms[1].rotation.set(-1.8,0,.25);rig.elbows.forEach(b=>b.rotation.x=-1.3);rig.head.rotation.x=.15;}if(!cheering){rig.head.rotation.y+=Math.sin(this.street.time*.4+i)*.18;
       if(i%10===0){rig.hips.position.y=.55;rig.legs.forEach(b=>b.rotation.x=-1.42);rig.knees.forEach(b=>b.rotation.x=1.42);rig.elbows.forEach(b=>b.rotation.x=-.9);}
       else if(i%5===0){rig.bones.spine.rotation.x=.15;rig.elbows.forEach(b=>b.rotation.x=-1.1);}
       else if(i%7===0){rig.arms[1].rotation.x=-.9;rig.elbows[1].rotation.x=-1.65;rig.head.rotation.x=.16;}
@@ -430,13 +443,8 @@ export class PitchRenderer {
       const target = Math.atan2(p.facingX, p.facingY);
       const frozen = match.state === "PAUSED" || match.state === "FULL_TIME";
       const striking = p.action?.kind === "pass" || p.action?.kind === "shot";
-      if(replay)g.rotation.y=target;
-      g.rotation.y +=
-        Math.atan2(
-          Math.sin(target - g.rotation.y),
-          Math.cos(target - g.rotation.y),
-        ) * (frozen ? 0 : 1 - Math.exp(-dt * (striking ? 45 : 12)));
-      if (!frozen && striking && p.action!.contacted) g.rotation.y = target;
+      // Heading is already rate-limited by the simulation. A second easing caused sideways skating.
+      if(!frozen)g.rotation.y=target;
       animateCharacter(
         this.rigs[i],
         this.clock,
@@ -463,9 +471,9 @@ export class PitchRenderer {
     const focusZ=close?THREE.MathUtils.clamp(match.ball.y,-16,16):0;
     const blend=1-Math.exp(-dt*(replay?5:3.8));
     const portrait=this.camera.aspect<1;
-    const height=replay?2.8:close?(portrait?13.5:this.cameraMode==='street'?gameplay.camera.streetHeight:gameplay.camera.followHeight):gameplay.camera.wideHeight;
-    const depth=replay?7.5:close?(portrait?17:this.cameraMode==='street'?gameplay.camera.streetDepth:gameplay.camera.followDepth):gameplay.camera.wideDepth;
-    const desiredCamera=new THREE.Vector3(focusX+(replay?3:0),height,depth+focusZ);
+    const height=close?(portrait?13.5:this.cameraMode==='street'?gameplay.camera.streetHeight:gameplay.camera.followHeight):gameplay.camera.wideHeight;
+    const depth=close?(portrait?17:this.cameraMode==='street'?gameplay.camera.streetDepth:gameplay.camera.followDepth):gameplay.camera.wideDepth;
+    const desiredCamera=new THREE.Vector3(focusX,height,depth+focusZ);
     if(replay&&(!this.wasReplay||Math.abs(this.cameraTarget.x-focusX)>12)){
       this.camera.position.copy(desiredCamera);this.cameraTarget.set(focusX,1,focusZ-1);
     }else this.camera.position.lerp(desiredCamera,blend);

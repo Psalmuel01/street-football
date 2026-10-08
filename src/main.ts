@@ -1,3 +1,4 @@
+import {resultsMarkup} from "./ui/results";
 import {type Formation} from "./content/formations";
 import {conditions,type Conditions} from "./content/conditions";
 import "./style.css";
@@ -17,6 +18,7 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = renderShell();
 let chosen = 0,
   playingTeam = 0,
+  playingOpponent = 1,
   mode = "match",
   running = false,
   lastEvent = -1;
@@ -42,6 +44,7 @@ async function boot() {
     if(page==='match'&&!running){router.go('setup');return;}
     if(page==='results'&&match.state!=='FULL_TIME'){router.go('home');return;}
     renderer.matchView=page==='match';
+    $('#home-nav').classList.toggle('active',page==='home');$('#area-nav').classList.toggle('active',['clubs','squad','setup'].includes(page));
     document.querySelectorAll('[data-step]').forEach(el=>el.setAttribute('aria-current',el.getAttribute('data-step')===page?'step':'false'));
     document.body.classList.toggle('in-match',page==='match');
     audio.setMatchActive(page==='match');
@@ -103,6 +106,8 @@ async function boot() {
   const busNames:Record<Bus,string>={master:'Master',music:'Music',commentary:'Commentary',players:'Player voices',crowd:'Crowd',environment:'Environment',sfx:'Sound effects',ui:'Menu sounds'};
   $('#mixer-controls').innerHTML=Object.entries(busNames).map(([key,label])=>`<label>${label}<input type="range" min="0" max="100" data-audio-bus="${key}" value="${Math.round(audio.levels[key as Bus]*100)}" aria-label="${label} volume"></label>`).join('');
   document.querySelectorAll<HTMLInputElement>('[data-audio-bus]').forEach(slider=>slider.oninput=()=>audio.setBus(slider.dataset.audioBus as Bus,Number(slider.value)/100));
+  let lastMoment=0;
+  $('#test-callout').insertAdjacentHTML('afterend','<p id="native-voice-status" role="status"></p>');
   let captionUntil=0;
   audio.onCaption=text=>{$('#commentary-caption').textContent=text;captionUntil=performance.now()+3500;};
   $('#voices-toggle').onchange=e=>audio.setVoices((e.target as HTMLInputElement).checked);
@@ -111,6 +116,7 @@ async function boot() {
   $('#test-callout').onclick=()=>{void audio.previewCallout();};
   $<HTMLSelectElement>('#conditions').onchange=e=>{const value=(e.target as HTMLSelectElement).value as Conditions;renderer.setConditions(value);$('#conditions-description').textContent=conditions[value].description;};
   audio.onChange=()=>{
+    $('#native-voice-status').textContent=audio.voiceStatus;
     $('#sound').textContent=audio.playing?'♫ MUSIC ON':'♫ MUSIC OFF';
     $('#sound').setAttribute('aria-pressed',String(audio.playing));
     $('#sound').setAttribute('aria-label',audio.playing?'Pause music':'Play Afrobeats music');
@@ -121,7 +127,7 @@ async function boot() {
     $<HTMLInputElement>('#voices-toggle').checked=audio.voices;
     $('.music-copy strong').textContent=audio.title;
     $('.music-settings>span').textContent='STREET RADIO';
-    $('#music-status').textContent=audio.error||(audio.playing?`Playing · ${audio.title}`:'Original Naija-inspired groove');
+    $('#music-status').textContent=audio.error||(audio.playing?`Playing · ${audio.title}`:'Afrobeats · FASSounds');
     for(const selector of ['#music-volume','#dialog-music-volume'])$<HTMLInputElement>(selector).value=String(Math.round(audio.volume*100));
     $<HTMLInputElement>('#effects-toggle').checked=audio.effects;
     document.querySelectorAll<HTMLInputElement>('[data-audio-bus]').forEach(slider=>slider.value=String(Math.round(audio.levels[slider.dataset.audioBus as Bus]*100)));
@@ -191,7 +197,8 @@ async function boot() {
     playingTeam = chosen;
     void audio.unlock();audio.setMatchActive(true);
     const opponent = Number($<HTMLSelectElement>("#opponent").value);
-    replay.clear();replayGoalSerial='';
+    playingOpponent=opponent;
+    replay.clear();replayGoalSerial='';lastMoment=0;
     match = new Match(
       mode === "training"
         ? 3600
@@ -203,6 +210,8 @@ async function boot() {
     match.configure(0,makeRoster(chosen),startingFives[chosen],gamePlans[chosen]);
     match.configure(1,makeRoster(opponent),[0,1,2,3,4]);
     match.setFormation(0,shapes[chosen]);match.resetPositions(0);
+    match.training=mode==='training';if(match.training)match.resetDrill();
+    $('#training-panel').hidden=!match.training;
     renderer.lastScore=0;
     match.players.forEach(p=>renderer.setPlayerAppearance(p.id,p.keeper?'#d66b49':teams[p.team===0?chosen:opponent].color,match.lineups[p.team][p.id%5],match.athlete(p).number));
     $("#home-score-name").textContent = teams[chosen].short;
@@ -247,6 +256,10 @@ async function boot() {
   $("#pause").onclick = () => input.pause();
   $('#home-nav').onclick=()=>router.go('home');
   $('#area-nav').onclick=(event)=>{event.preventDefault();router.go('clubs');};
+  $('#court').insertAdjacentHTML('beforeend','<div id="training-panel" hidden><strong>TRAINING GROUND</strong><select id="training-drill" aria-label="Training drill"><option value="free">Free practice</option><option value="through">Through-ball runs</option><option value="finishing">Finishing</option></select><p id="training-tip">No clock. No opponent press. Full energy.</p><span id="training-progress"></span><button id="reset-drill">RESET BALL ↺</button></div>');
+  const resetPractice=()=>{replay.clear();match.resetDrill($<HTMLSelectElement>('#training-drill').value as typeof match.drill);};
+  $('#reset-drill').onclick=resetPractice;$('#training-drill').onchange=()=>{resetPractice();$<HTMLSelectElement>('#training-drill').blur();};
+  $('#player-tag').insertAdjacentHTML('beforeend','<small class="sprint-hint">SHIFT / R1 · SPRINT</small>');
   $("#camera-view").onclick = () => {
     renderer.cameraMode = renderer.cameraMode==='follow'?'broadcast':renderer.cameraMode==='broadcast'?'street':'follow';
     $("#camera-view").textContent = renderer.cameraMode==='broadcast'?'WIDE':renderer.cameraMode.toUpperCase();
@@ -280,7 +293,7 @@ async function boot() {
     if (match.state === "FULL_TIME") {
       const total = match.possession[0] + match.possession[1];
       overlay.innerHTML = `<p class="eyebrow">FULL TIME · RESPECT THE GAME</p><h2>${match.score[0]} — ${match.score[1]}</h2><p>${match.score[0] === match.score[1] ? "Honours shared. Run it back?" : match.score[0] > match.score[1] ? "Your area takes the bragging rights." : "Another game. Another chance."}</p><div class="result-stats">${match.shots[0]}–${match.shots[1]} shots · ${match.passes[0]}–${match.passes[1]} passes · ${match.saves[0]}–${match.saves[1]} saves<br>${total ? Math.round((match.possession[0] / total) * 100) : 50}% possession</div><button class="primary" id="rematch">RUN IT BACK ↗</button>`;
-      $('#results-page').innerHTML=`<p class="eyebrow">FULL TIME / MATCH REPORT</p><h1>${match.score[0]>match.score[1]?'Your ground. Your glory.':match.score[0]===match.score[1]?'Honours shared.':'The next game is yours.'}</h1><div class="result-score"><span>${teams[playingTeam].name}</span><b>${match.score[0]} — ${match.score[1]}</b><span>${$('#away-score-name').textContent}</span></div><div class="result-metrics"><div><b>${match.shots[0]} — ${match.shots[1]}</b><span>SHOTS</span></div><div><b>${match.passes[0]} — ${match.passes[1]}</b><span>PASSES</span></div><div><b>${match.saves[0]} — ${match.saves[1]}</b><span>SAVES</span></div><div><b>${total?Math.round(match.possession[0]/total*100):50}%</b><span>YOUR POSSESSION</span></div></div><div class="flow-actions"><button data-route="home" class="secondary">BACK HOME</button><button id="result-rematch" class="primary">RUN IT BACK ↗</button></div>`;
+      $('#results-page').innerHTML=resultsMarkup(match,playingTeam,playingOpponent);
       $('#result-rematch').onclick=start;
       $("#rematch").onclick = start;
       router.go('results');
@@ -330,6 +343,7 @@ async function boot() {
     audio.update(dt,running&&match.state==='PLAYING'&&!replay.active,Math.hypot(match.players[match.active].vx,match.players[match.active].vy),match.condition==='rain',renderer.cameraTarget.x,renderer.cameraTarget.z);
     $('#commentary-caption').hidden=now>captionUntil||router.page!=='match';
     replay.advance(dt,match.state==='PAUSED'||document.hidden);
+    renderer.showDecision(replay.showing?null:match.referee,match.state==='PAUSED');
     const replayFrame=replay.sample();
     if(replayFrame&&match.state==='PAUSED')replayFrame.state='PAUSED';
     $('#replay-banner').hidden=!replay.showing;
@@ -345,7 +359,7 @@ async function boot() {
     if (running) {
       const selected = match.players[match.active];
       const defending=match.owner!==null&&match.players[match.owner].team===1;
-      for(const [action,label] of Object.entries(defending?{pass:'CONTAIN',shoot:'PRESS',through:'RUSH',tackle:'TACKLE'}:{pass:'PASS',shoot:'SHOOT',through:'THROUGH',tackle:'LOFT'})){
+      for(const [action,label] of Object.entries(defending?{pass:'CONTAIN',shoot:'PRESS',through:'RUSH',tackle:'SLIDE'}:{pass:'PASS',shoot:'SHOOT',through:'THROUGH',tackle:'LOFT'})){
         const button=$(`[data-action="${action}"]`);button.querySelector('small')!.textContent=label;button.setAttribute('aria-label',label);
       }
       $("#player-tag strong").textContent =
@@ -353,7 +367,10 @@ async function boot() {
       $("#player-tag span").textContent =
         `${selected.keeper ? "KEEPER" : "NO. " + match.athlete(selected).number} · ${teams[playingTeam].short}`;
       $<HTMLMeterElement>("#player-tag meter").value = selected.stamina;
-      $("#score").textContent = `${match.score[0]} : ${match.score[1]}`;
+      $('#player-tag').classList.toggle('sprinting',fresh.sprint&&Math.hypot(selected.vx,selected.vy)>4);
+      $('.sprint-hint').textContent=fresh.sprint&&Math.hypot(selected.vx,selected.vy)>4?(match.training?'SPRINTING · FULL ENERGY':'SPRINTING · ENERGY ↓'):'SHIFT / R1 · SPRINT';
+      $("#score").textContent = match.training?'DRILLS':`${match.score[0]} : ${match.score[1]}`;
+      if(match.training){$('#training-progress').textContent=`${match.completedPasses[0]} passes · ${match.shots[0]} shots · ${match.score[0]} goals`;$('#training-tip').textContent=match.drill==='through'?'Aim toward your runner + K / △. Lead into space.':match.drill==='finishing'?'J / □ to finish. Aim with movement. Reset and repeat.':'No clock. No opponent press. Full energy.';}
       const t = Math.ceil(match.duration - match.elapsed);
       $("#timer").textContent =
         mode === "training"
@@ -361,13 +378,21 @@ async function boot() {
           : `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
       const announcement = $("#announcement");
       announcement.hidden = !(
-        !replay.showing && (match.state === "KICKOFF" || match.state === "GOAL" || match.restartPending)
+        !replay.showing && (match.state === "KICKOFF" || match.state === "GOAL" || match.state === "FOUL" || match.state === "FREE_KICK" || match.restartPending)
       );
       announcement.textContent =
-        match.state === "GOAL" ? "NA GOAL!" : match.kickoffTeam===0?"YOUR KICK-OFF · PRESS ✕":"OPPOSITION KICK-OFF";
+        match.state === "FOUL" ? `FOUL · ${match.referee?.team===0?'YOUR BALL':'OPPOSITION BALL'}` : match.state==='FREE_KICK' ? `${match.setPiece?.penalty?'PENALTY':'FREE KICK'} · ${match.setPiece?.team===0?'✕ PASS / □ SHOOT':'OPPOSITION'}` : match.state === "GOAL" ? "NA GOAL!" : match.kickoffTeam===0?"YOUR KICK-OFF · PRESS ✕":"OPPOSITION KICK-OFF";
+      const moments=match.moments.filter(moment=>moment.id>lastMoment);
+      if(moments.length){
+        lastMoment=moments.at(-1)!.id;
+        // Deliver all visual reactions; prefer the more specific spoken call within a frame.
+        const priority=(kind:string)=>['late-winner','late-lead','penalty','foul','big-save','nutmeg'].includes(kind)?4:['goal','fulltime','near-goal','miss'].includes(kind)?3:2;
+        moments.forEach(moment=>renderer.react(moment.kind,moment.intensity));
+        const spoken=moments.reduce((best,m)=>priority(m.kind)>priority(best.kind)?m:best);audio.react(spoken);
+      }
       if (lastEvent !== match.eventSerial) {
         lastEvent = match.eventSerial;
-        audio.cue(match.event);
+
         if (match.state === "FULL_TIME") updateOverlay();
         $("#court").setAttribute(
           "aria-label",

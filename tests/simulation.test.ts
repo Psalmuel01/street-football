@@ -60,7 +60,7 @@ test("passing releases independent ball and selects receiver", () => {
   m.step(1 / 60, { ...idle(), pass: true });
   assert.equal(m.owner, 3, "pass retains possession during wind-up");
   assert.equal(m.passes[0], 0);
-  for (let i = 0; i < 5; i++) m.step(1 / 60, idle());
+  for (let i = 0; i < 45 && m.passes[0]===0; i++) m.step(1 / 60, idle());
   assert.equal(m.owner, null);
   assert.ok(Math.hypot(m.ball.vx, m.ball.vy) > 10);
   assert.notEqual(m.active, 3);
@@ -76,7 +76,7 @@ test("tackle transfers nearby opposing possession", () => {
   a.x = b.x - 1.3;
   a.y = b.y;
   m.ball.x=b.x;m.ball.y=b.y;
-  m.step(1 / 60, { ...idle(), tackle: true });
+  m.tackle(a);m.step(1 / 60,idle());
   assert.equal(m.owner, 8);
   for (let i = 0; i < 8; i++) m.step(1 / 60, idle());
   assert.equal(m.owner, 3);
@@ -214,7 +214,7 @@ test("goal gives scoring team a celebration and resets it at kickoff", () => {
 test('circle requests a lofted pass in possession; triangle stays on the ground', () => {
   for (const action of ['tackle', 'through'] as const) {
     const m = new Match();m.state = 'PLAYING';m.restartPending=false;m.owner=null;m.active = 3;m.owner = 3;
-    const p=m.players[3];m.ball.x=p.x;m.ball.y=p.y;p.facingX=0;p.facingY=1;
+    const p=m.players[3];m.players[4].x=8;m.players[4].y=0;m.ball.x=p.x;m.ball.y=p.y;p.facingX=0;p.facingY=1;
     m.step(1/60,{...idle(),[action]:true});
     assert.equal(p.pendingKick?.kind,'pass');
     assert.equal(p.pendingKick?.lob,action==='tackle');

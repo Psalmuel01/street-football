@@ -1,0 +1,10 @@
+# Gameplay polish — 7 October 2026
+
+- Circle / L is a committed sliding tackle out of possession, with a loose ball on clean contact and 1.25 s of animation/recovery. AI standing challenges retain their recovery pose. Rear/late body contact is a foul; penalties apply in the defending area, otherwise a protected free kick. This is a street-rules referee, without cards, offside or advantage.
+- Running uses rate-limited direction changes, braking on reversals, world-space stance anchors, bounded knee reach and level soles. Large shooting turns have a preparation phase before contact. Shirt/shorts skin weights blend at the hip; slide soles stay above the court.
+- K / Triangle uses current movement input to select a forward runner, leads a grounded ball into space and accelerates the receiver. The ball does not home after release. Shift / R1 sprints, consuming match stamina.
+- Practice offers free play, through-ball and finishing presets with reset, no clock, full stamina and passive outfield defenders. The keeper stays active. Actual matches retain opposing AI, score, time, stamina and results.
+- All camera modes work during replay. View/fullscreen buttons sit on the right; navigation labels and centered underlines are consistent on phones.
+- Bounded match moments drive priority-based commentary, randomized non-repeating lines, crowd sound envelopes and visible positive/negative crowd gestures. A late lead is only called a late winner at full time. Native voice export is documented in NATIVE-VOICE.md; no native provider audio has been generated or subjectively approved without credentials.
+
+Validation: deterministic regression suite; real-browser slide/foul/free-kick sequences with video; clip deformation/contact checks; K, sprint, fullscreen, practice and three replay camera modes; desktop/phone match and substitution flows. The straight-running anchor check measured maximum horizontal stance drift of 0.00159 m per frame across 216 locked-foot samples. This does not establish that all animation is photorealistic or free from artifacts under every collision or camera angle.

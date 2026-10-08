@@ -9,6 +9,8 @@ export const clipNames = [
   "pass",
   "shot",
   "tackle",
+  "slide",
+  "stumble",
   "skill",
   "keeper",
   "catch",
@@ -119,6 +121,22 @@ export function samplePose(name: ClipName, t: number): Pose {
     r.footL[0] = -0.75 * progress;
     r.armL[2] = -0.55 * progress;
     r.armR[2] = 0.55 * progress;
+    return p;
+  }
+  if(name==='slide'){
+    const down=curve(t,[[0,0],[.16,1],[.48,1],[.8,.8],[1.05,.3],[1.25,0]]);
+    p.position[1]-=.58*down;
+    r.spine[0]=-.22*down;r.chest[1]=-.08*down;
+    r.legR[0]=-1.3*down;r.kneeR[0]=.15*down;r.footR[0]=.2*down;
+    r.legL[0]=-1.8*down;r.legL[2]=-.15*down;r.kneeL[0]=2.2*down;r.footL[0]=-.6*down;
+    r.armL=[.3*down,0,-.65*down];r.armR=[.25*down,0,.7*down];
+    r.elbowL[0]=r.elbowR[0]=-.5*down;
+    return p;
+  }
+  if(name==='stumble'){
+    const a=curve(t,[[0,0],[.16,1],[.32,.85],[.75,0]]);
+    p.position[1]-=.12*a;r.spine[0]=.35*a;r.legL[0]=-.25*a;r.kneeL[0]=.5*a;r.legR[0]=.15*a;r.kneeR[0]=.3*a;
+    r.armL[2]=-.55*a;r.armR[2]=.55*a;r.elbowL[0]=r.elbowR[0]=-.65*a;
     return p;
   }
   if (name === "skill") {

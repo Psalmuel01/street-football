@@ -66,7 +66,7 @@ try {
       (n, i) => Math.abs(n - rig.bones.kneeR.quaternion.toArray()[i]) < 1e-8,
     );
     let finite = true;
-    for (const kind of ["pass", "shot", "tackle", "catch", "dive", "celebrate"])
+    for (const kind of ["pass", "shot", "tackle", "slide", "stumble", "catch", "dive", "celebrate"])
       for (let i = 0; i <= 20; i++) {
         animateCharacter(rig, i / 20, 0, 0, false, {
           kind,
@@ -123,6 +123,8 @@ try {
     const cases = [
       ["STAND", null, 0],
       ["RUN", null, 5],
+      ["SLIDE CONTACT",{kind:"slide",elapsed:.2,duration:1.25,side:1,contacted:true},0],
+      ["SLIDE RECOVERY",{kind:"slide",elapsed:.85,duration:1.25,side:1,contacted:true},0],
       [
         "PASS",
         {
@@ -220,6 +222,7 @@ try {
       );
       camera.position.set(2.1, 1.5, 3.5);
       camera.lookAt(0, 1, 0);
+      if (label.startsWith("SLIDE")) {camera.position.set(2.5,1.2,4.1);camera.lookAt(0,.75,.3);}
       if (label === "DIVE") {
         camera.position.set(2.4, 1.5, 4.1);
         camera.lookAt(0.3, 0.85, 0);
@@ -260,7 +263,7 @@ try {
   assert.ok(diagnostics.headingFrozen, "Pause must freeze actor heading");
   assert.ok(diagnostics.finite);
   assert.ok(diagnostics.weightsValid);
-  assert.equal(diagnostics.clips.length, 13);
+  assert.equal(diagnostics.clips.length, 15);
   assert.deepEqual(errors, []);
 } finally {
   await browser.close();

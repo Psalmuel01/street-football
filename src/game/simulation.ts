@@ -1,3 +1,4 @@
+import {type MatchMoment,type MomentKind} from "./reactions";
 import {formations,type Formation} from "../content/formations";
 import {gameplay} from "./gameplay.config";
 import {passOptions,passDestination} from "./football/passing";
@@ -36,7 +37,7 @@ export const idle = (): Input => ({
   switch: false,
   skill: false,
 });
-export type State = "KICKOFF" | "PLAYING" | "GOAL" | "PAUSED" | "FULL_TIME";
+export type State = "FOUL" | "FREE_KICK" | "KICKOFF" | "PLAYING" | "GOAL" | "PAUSED" | "FULL_TIME";
 export type Player = {
   id: number;
   team: number;
@@ -63,6 +64,15 @@ export type Player = {
   runUntil: number;
 };
 export class Match {
+  training=false;
+  drill:'free'|'through'|'finishing'='free';
+  resetDrill(drill:typeof this.drill=this.drill){
+    this.drill=drill;this.resetPositions();this.state='PLAYING';this.owner=3;this.active=3;this.lock=.3;this.referee=null;this.setPiece=null;
+    const p=this.players[3];p.x=drill==='finishing'?18:drill==='through'?-8:0;p.y=0;p.facingX=1;p.facingY=0;
+    Object.assign(this.players[4],{x:drill==='through'?2:12,y:-5,vx:drill==='through'?3:0,vy:0});
+    for(const q of this.players.filter(q=>q.team===1&&!q.keeper)){q.x=drill==='through'?11:24;q.y=(q.id-7.5)*7;}
+    this.ball={x:p.x+.64,y:0,z:0,vx:0,vy:0,vz:0};this.lastTouch=3;
+  }
   players: Player[] = [];
   rosters: Athlete[][] = [makeRoster(0),makeRoster(1)];
   lineups = [[0,1,2,3,4],[0,1,2,3,4]];
@@ -107,6 +117,13 @@ export class Match {
   shots = [0, 0];
   passes = [0, 0];
   tackles = [0, 0];
+  moments:MatchMoment[]=[];
+  fouls=[0,0];
+  referee:{team:number;offender:number;victim:number;x:number;y:number;penalty:boolean}|null=null;
+  setPiece:{team:number;taker:number;x:number;y:number;penalty:boolean}|null=null;
+  private shotFlight:{team:number;fromX:number;fromY:number}|null=null;
+  private closeCalled=false;
+  private lateLeadTeam:number|null=null;
   event = "kickoff";
   eventSerial = 0;
   scorer = 0;
@@ -180,9 +197,11 @@ export class Match {
       if (kickoffTeam === 0) this.active = taker.id;
     }
   }
+  react(kind:MomentKind,team=-1,intensity=1){this.moments.push({id:(this.moments.at(-1)?.id??0)+1,kind,time:this.presentationTime,team,intensity});if(this.moments.length>100)this.moments.shift();}
   emit(event: string) {
     this.event = event;
     this.eventSerial++;
+    this.react(event as MomentKind);
   }
   pause() {
     if (this.state === "PAUSED") this.state = this.previous;
@@ -221,10 +240,11 @@ export class Match {
     if (this.owner !== p.id || p.pendingKick || p.action || p.cooldown > 0)
       return false;
     const d = Math.hypot(tx - p.x, ty - p.y) || 1;
-    p.facingX = (tx - p.x) / d;
-    p.facingY = (ty - p.y) / d;
+    const targetHeading=Math.atan2(ty-p.y,tx-p.x),heading=Math.atan2(p.facingY,p.facingX);
+    const turn=Math.atan2(Math.sin(targetHeading-heading),Math.cos(targetHeading-heading));
     p.pendingKick = { tx, ty, power, lob, kind, receiver };
     this.beginAction(p, kind);
+    p.action!.turnRemaining=Math.abs(turn)>.2?Math.abs(turn)/8:0;if(Math.abs(turn)<=.2){p.facingX=Math.cos(targetHeading);p.facingY=Math.sin(targetHeading);}p.action!.targetHeading=targetHeading;
     p.cooldown = actionTiming[kind].duration;
     return true;
   }
@@ -241,6 +261,7 @@ export class Match {
       this.passFlight={receiver:receiver.id,age:0,through:!!kick.through,speed:kick.power,targetX:target.x,targetY:target.y};
     } else this.passFlight=null;
     this.restartPending=false;
+    if(this.setPiece){this.setPiece=null;this.referee=null;this.state="PLAYING";}
     const d = Math.hypot(kick.tx - p.x, kick.ty - p.y) || 1,
       dx = (kick.tx - p.x) / d,
       dy = (kick.ty - p.y) / d;
@@ -254,8 +275,8 @@ export class Match {
     this.lastTouch = p.id;
     this.lock = 0.23;
     this.emit(kick.kind);
-    if (kick.kind === "shot") this.shots[p.team]++;
-    else {
+    if (kick.kind === "shot") {this.shots[p.team]++;this.shotFlight={team:p.team,fromX:p.x,fromY:p.y};}else this.shotFlight=null;
+    if(kick.kind!=="shot") {
       this.passes[p.team]++;
       if (p.team === 0 && kick.receiver !== null) this.active = kick.receiver;
     }
@@ -269,63 +290,78 @@ export class Match {
         p.action = null;
         continue;
       }
-      action.elapsed = Math.min(action.duration, action.elapsed + dt);
+      let actionDt=dt;
+      if(action.turnRemaining && action.turnRemaining>0){actionDt=Math.max(0,dt-action.turnRemaining);const heading=Math.atan2(p.facingY,p.facingX),target=action.targetHeading!,delta=Math.atan2(Math.sin(target-heading),Math.cos(target-heading)),step=Math.min(Math.abs(delta),8*dt)*Math.sign(delta);p.facingX=Math.cos(heading+step);p.facingY=Math.sin(heading+step);action.turnRemaining=Math.max(0,action.turnRemaining-dt);if(actionDt===0)continue;}
+      action.elapsed = Math.min(action.duration, action.elapsed + actionDt);
       if (
-        !action.contacted &&
+        action.kind!=="slide" && !action.contacted &&
         action.elapsed + 1e-9 >= actionTiming[action.kind].contact
       ) {
         action.contacted = true;
         if (p.pendingKick) this.releaseKick(p);
-        if (action.kind === "tackle") {
-          const carrier = this.owner === null ? null : this.players[this.owner];
-          if (
-            carrier &&
-            carrier.team !== p.team &&
-            this.lock === 0 && carrier.recovery === 0 &&
-            ((carrier.x-p.x)*p.facingX+(carrier.y-p.y)*p.facingY)/(Math.hypot(carrier.x-p.x,carrier.y-p.y)||1)>gameplay.tackling.minAlignment &&
-            Math.hypot(carrier.x - p.x, carrier.y - p.y) < 1.6+this.athlete(p).defending*.003
-          ) {
-            this.owner = p.id;
-            const fromOpponent=this.players[this.lastTouch].team!==p.team;
-          const completed=this.passFlight!==null&&this.players[this.lastTouch].team===p.team;
-          this.lastTouch = p.id;
-            // End the winning tackle at contact: control returns immediately.
-            // The losing player must recover before attempting another challenge.
-            this.lock = gameplay.tackling.protection;
-            this.passFlight=null;
-            p.action=null;p.cooldown=0;p.recovery=0;p.touchTime=0;p.receiveTime=.18;
-            if(p.team===0)this.active=p.id;else this.selectDefenderAfterLoss();
-            carrier.cooldown=Math.max(carrier.cooldown,gameplay.tackling.retry);
-            carrier.recovery=gameplay.tackling.recovery;
-            const dx=carrier.x-p.x,dy=carrier.y-p.y,d=Math.hypot(dx,dy)||1;
-            carrier.vx=dx/d*2.4;carrier.vy=dy/d*2.4;
-            this.tackles[p.team]++;
-            carrier.pendingKick = null;
-            carrier.action = null;
-            this.emit("tackle");
-          }
-        }
+        if (action.kind === "tackle") this.resolveTackle(p,false);
+      }
+      if(action.kind==='slide'&&!action.contacted&&action.elapsed>=.10&&action.elapsed<=.43){
+        if(this.resolveTackle(p,true))action.contacted=true;
+
       }
       if (action.elapsed >= action.duration) p.action = null;
     }
   }
-  tackle(p: Player) {
-    if (p.cooldown > 0 || p.action || p.recovery > 0 || this.lock > 0) return;
-    p.cooldown = actionTiming.tackle.duration;
-    this.beginAction(p, "tackle");
-    const carrier = this.owner === null ? null : this.players[this.owner];
-    if (carrier && carrier.team !== p.team) {
-      const d = Math.hypot(carrier.x - p.x, carrier.y - p.y) || 1;
-      p.facingX = (carrier.x - p.x) / d;
-      p.facingY = (carrier.y - p.y) / d;
-    }
+  resolveTackle(p:Player,slide:boolean){
+    const carrier=this.owner===null?null:this.players[this.owner];
+    const victim=carrier&&carrier.team!==p.team?carrier:this.players.filter(q=>q.team!==p.team&&!q.keeper).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+    const dx=this.ball.x-p.x,dy=this.ball.y-p.y,ballDistance=Math.hypot(dx,dy),alignment=(dx*p.facingX+dy*p.facingY)/(ballDistance||1);
+    const bodyDistance=victim?Math.hypot(victim.x-p.x,victim.y-p.y):100;
+    const behind=!!victim&&((p.x-victim.x)*victim.facingX+(p.y-victim.y)*victim.facingY)<-.35;
+    const bodyAlignment=victim?((victim.x-p.x)*p.facingX+(victim.y-p.y)*p.facingY)/(bodyDistance||1):-1;
+    const clean=ballDistance<(slide?1.3:1.7)&&alignment>.45&&this.ball.z<.5&&!(behind&&bodyDistance<ballDistance-.15);
+    if(slide&&victim&&bodyDistance<1.05&&bodyAlignment>-.1&&!clean){this.awardFoul(p,victim);return true;}
+    if(!clean||this.lock>0||carrier?.team===p.team||carrier?.recovery)return false;
+    this.passFlight=null;this.bufferedPass=null;this.shotFlight=null;
+    this.lastTouch=p.id;this.tackles[p.team]++;this.lock=gameplay.tackling.protection;
+    if(slide){this.owner=null;this.ball.vx=p.facingX*6;this.ball.vy=p.facingY*6;this.ball.vz=1;this.ball.z=.05;p.recovery=.7;this.emit('hard-tackle');}
+    else {this.owner=p.id;p.receiveTime=.18;p.touchTime=0;this.emit('tackle');}
+    if(carrier){carrier.pendingKick=null;carrier.cooldown=Math.max(carrier.cooldown,.9);carrier.recovery=.45;this.beginAction(carrier,'stumble');}
+    if(p.team===0)this.active=p.id;else this.selectDefenderAfterLoss();return true;
   }
-  pass(p: Player, through = false, lob = false) {
-    const options=passOptions(p,this.players,through);
+  awardFoul(offender:Player,victim:Player){
+    if(this.state!=='PLAYING')return;
+    const dir=victim.team===0?1:-1,penalty=victim.x*dir>23&&Math.abs(victim.y)<6;
+    this.fouls[offender.team]++;this.referee={team:victim.team,offender:offender.id,victim:victim.id,x:victim.x,y:victim.y,penalty};
+    this.setPiece=null;this.state='FOUL';this.stateTime=1.35;this.owner=null;this.passFlight=null;this.bufferedPass=null;this.shotFlight=null;
+    this.ball.vx=this.ball.vy=this.ball.vz=0;
+    for(const q of this.players){q.pendingKick=null;q.vx=q.vy=0;if(q.id!==offender.id)q.action=null;}
+    this.beginAction(victim,'stumble');this.emit('foul');
+  }
+  prepareFreeKick(){
+    const foul=this.referee!;const dir=foul.team===0?1:-1,x=foul.penalty?dir*22:Math.max(-27,Math.min(27,foul.x)),y=foul.penalty?0:Math.max(-16,Math.min(16,foul.y));
+    const taker=this.players[foul.victim];this.setPiece={team:foul.team,taker:taker.id,x,y,penalty:foul.penalty};
+    for(const q of this.players){q.action=null;q.pendingKick=null;q.cooldown=0;q.recovery=0;q.vx=q.vy=0;
+      if(q.id!==taker.id&&!q.keeper){const dx=q.x-x,dy=q.y-y,d=Math.hypot(dx,dy)||1;if(d<5){q.x=x+(dx/d||-dir)*5.2;q.y=Math.max(-16,Math.min(16,y+dy/d*5.2));}if(foul.penalty&&q.x*dir>17)q.x=dir*17;}
+    }
+    for(const q of this.players){q.x=Math.max(-29.5,Math.min(29.5,q.x));q.y=Math.max(-17.5,Math.min(17.5,q.y));}
+    taker.x=x-dir*.64;taker.y=y;taker.facingX=dir;taker.facingY=0;
+    this.ball={x,y,z:0,vx:0,vy:0,vz:0};this.owner=taker.id;this.lastTouch=taker.id;this.lock=.4;this.restartPending=false;this.restartTime=0;this.state='FREE_KICK';
+    if(foul.team===0)this.active=taker.id;
+    this.emit(foul.penalty?'penalty':'free-kick');
+  }
+  tackle(p: Player,slide=false) {
+    if (p.cooldown > 0 || p.action || p.recovery > 0 || this.lock > 0 || this.state!=='PLAYING') return;
+    const kind=slide?'slide':'tackle';p.cooldown=actionTiming[kind].duration+.2;
+    this.beginAction(p,kind);
+    // A slide commits to the current direction; it cannot home in on a moving carrier.
+    if(slide){p.vx=p.facingX*8;p.vy=p.facingY*8;}
+  }
+  pass(p: Player, through = false, lob = false, aim?:{x:number;y:number}) {
+    const magnitude=aim?Math.hypot(aim.x,aim.y):0;
+    const intent=aim&&magnitude>.15?{...p,facingX:aim.x/magnitude,facingY:aim.y/magnitude}:p;
+    const options=passOptions(intent,this.players,through);
     const best=options[0];this.passCandidate=best??null;
     // A protected restart always has a legal short outlet, irrespective of facing.
-    const target=best?this.players[best.receiver]:this.restartPending?this.players[p.team*5+4]:null;
+    const target=best?this.players[best.receiver]:(this.restartPending||this.setPiece)?this.players.filter(q=>q.team===p.team&&q.id!==p.id&&!q.keeper).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]:null;
     if(!target)return false;
+    if(through)target.runUntil=this.elapsed+2.5;
     const distance=Math.hypot(target.x-p.x,target.y-p.y);
     const power=Math.min(gameplay.passing.maxSpeed,Math.max(gameplay.passing.minSpeed,10+distance*.72))*(through?1.12:1);
     const kicked=this.kick(p,target.x,target.y,power,lob,'pass',target.id);
@@ -347,11 +383,19 @@ export class Match {
   step(dt: number, input: Input) {
     if (this.state === "PAUSED" || this.state === "FULL_TIME") return;
     this.presentationTime += dt;
+    if(this.state==='FOUL'){this.advanceActions(dt);this.stateTime-=dt;if(this.stateTime<=0)this.prepareFreeKick();return;}
+    if(this.state==='FREE_KICK'){
+      const restart=this.setPiece!,taker=this.players[restart.taker];this.restartTime+=dt;
+      if(restart.team===0){if(input.shoot)this.shoot(taker,input.y);else if(input.pass||input.through)this.pass(taker,input.through);}
+      else if(this.restartTime>1.4){if(restart.penalty||Math.abs(restart.x)>16)this.shoot(taker);else this.pass(taker);}
+      this.advanceActions(dt);return;
+    }
     if (this.state !== "PLAYING") {
       if (this.state === "GOAL") this.advanceActions(dt);
       this.stateTime -= dt;
       if (this.stateTime <= 0) {
         if (this.state === "GOAL") {
+          if(this.training){this.resetDrill();return;}
           this.resetPositions(this.kickoffTeam);
           this.state = "KICKOFF";
           this.stateTime = 1.2;
@@ -370,7 +414,7 @@ export class Match {
       return;
     }
     this.restartPending=false;
-    this.elapsed = Math.min(this.duration, this.elapsed + dt);
+    if(!this.training)this.elapsed = Math.min(this.duration, this.elapsed + dt);
     if (this.elapsed >= this.duration) {
       this.state = "FULL_TIME";
       for (const p of this.players) {
@@ -378,12 +422,15 @@ export class Match {
         p.pendingKick = null;
         p.vx = p.vy = 0;
       }
+      if(this.lateLeadTeam!==null&&this.score[this.lateLeadTeam]>this.score[1-this.lateLeadTeam])this.react('late-winner',this.lateLeadTeam,1.5);
       this.emit("fulltime");
       return;
     }
+    if(!this.closeCalled&&this.elapsed>this.duration*.75&&Math.abs(this.score[0]-this.score[1])<=1){this.closeCalled=true;this.react('close-match',-1,.6);}
     this.lock = Math.max(0, this.lock - dt);
     this.aiTime += dt;
     this.advanceActions(dt);
+    if(this.state!=="PLAYING")return;
     if(input.passAndMove && this.owner!==null && this.players[this.owner].team===0)this.active=this.owner;
     if (input.switch && !input.passAndMove) this.selectPlayer(this.nearest(0, this.active).id);
     if(this.bufferedPass && this.bufferedPass.expires<this.elapsed)this.bufferedPass=null;
@@ -410,18 +457,16 @@ export class Match {
           if(d>.25){mx=dx/d*Math.min(1,d/2);my=dy/d*Math.min(1,d/2);}
         }
         const aim = Math.hypot(mx, my);
-        if (aim > 0.12 && !p.action) {
-          p.facingX = mx / aim;
-          p.facingY = my / aim;
-        }
+
         if (this.owner === p.id) {
           if (input.shoot) this.shoot(p,input.y);
-          else if (input.pass || input.through) {if(this.pass(p, input.through)&&input.passAndMove)p.runUntil=this.elapsed+gameplay.movement.runSeconds;}
+          else if (input.pass || input.through) {if(this.pass(p, input.through,false,{x:input.x,y:input.y})&&input.passAndMove)p.runUntil=this.elapsed+gameplay.movement.runSeconds;}
           if (input.skill && p.cooldown === 0) {
             p.touchTime=0;
             p.cooldown = 0.8;
             this.beginAction(p, "skill");
-            this.emit("skill");
+            const defender=this.players.find(q=>q.team!==p.team&&!q.keeper&&Math.hypot(q.x-p.x,q.y-p.y)<1.6&&((q.x-p.x)*p.facingX+(q.y-p.y)*p.facingY)>.8&&Math.abs((q.x-p.x)*p.facingY-(q.y-p.y)*p.facingX)<.22);
+            if(defender){this.owner=null;this.ball.vx=p.facingX*8;this.ball.vy=p.facingY*8;this.lock=.3;defender.recovery=.35;this.emit('nutmeg');}else this.emit("skill");
           }
         }
         if(this.owner!==p.id && own?.team!==p.team && input.contain){
@@ -429,7 +474,7 @@ export class Match {
           if(d>1.15){mx=dx/d*.85;my=dy/d*.85;}
           else {mx=0;my=0;}
         }
-        if (input.tackle) {if(this.owner===p.id)this.pass(p,false,true);else this.tackle(p);}
+        if (input.tackle) {if(this.owner===p.id)this.pass(p,false,true);else this.tackle(p,true);}
       } else {
         let tx = p.homeX,
           ty = p.homeY;
@@ -487,7 +532,7 @@ export class Match {
           own.team !== p.team &&
           !p.keeper &&
           Math.hypot(p.x - own.x, p.y - own.y) < gameplay.ai.pressureDistance[p.team===0?1:this.difficulty] &&
-          this.lock === 0
+          this.lock === 0 && !this.training
         )
           this.tackle(p);
         if (
@@ -516,9 +561,15 @@ export class Match {
           }
         }
       }
+      if(this.passFlight?.receiver===p.id&&this.owner===null){
+        const bx=this.ball.x-p.x,by=this.ball.y-p.y,d=Math.hypot(bx,by);
+        if(d<4&&(bx*this.ball.vx+by*this.ball.vy)<0){const tx=bx+this.ball.vx*.08,ty=by+this.ball.vy*.08,length=Math.hypot(tx,ty)||1;mx=tx/length*Math.min(1,length);my=ty/length*Math.min(1,length);}
+      }
+      if(this.training&&p.team===1&&!p.keeper){mx=my=0;sprint=false;}
+      if(this.passFlight?.receiver===p.id&&this.passFlight.through)sprint=true;
       const planted =
         p.action &&
-        ["pass", "shot", "tackle", "catch", "dive"].includes(p.action.kind);
+        ["pass", "shot", "tackle", "slide", "stumble", "catch", "dive"].includes(p.action.kind);
       if (planted || p.recovery>0) {
         mx = 0;
         my = 0;
@@ -530,22 +581,25 @@ export class Match {
         my /= mag;
       }
       if (mag > 0.12 && !p.action) {
-        p.facingX = mx / (mag > 1 ? 1 : mag);
-        p.facingY = my / (mag > 1 ? 1 : mag);
+        const heading=Math.atan2(p.facingY,p.facingX),target=Math.atan2(my,mx),delta=Math.atan2(Math.sin(target-heading),Math.cos(target-heading));
+        const turn=Math.max(-7*dt,Math.min(7*dt,delta));p.facingX=Math.cos(heading+turn);p.facingY=Math.sin(heading+turn);
+        const braking=Math.max(.15,Math.cos(delta));mx*=braking;my*=braking;
       }
       p.stamina = Math.max(
         0,
         Math.min(1, p.stamina + (sprint && mag > 0.1 ? -0.12 : 0.08) * dt),
       );
+      if(this.training)p.stamina=1;
       const speed =
         p.pace * (0.78 + .22*p.stamina) *
         (sprint && p.stamina > 0.05 ? gameplay.movement.sprintMultiplier : 1);
       const lerp = 1 - Math.exp(-(p.recovery>0?5:planted ? 35 : 14*conditions[this.condition].traction) * dt);
-      p.vx += (mx * speed - p.vx) * lerp;
-      p.vy += (my * speed - p.vy) * lerp;
+      if(p.action?.kind==='slide'){const progress=p.action.elapsed;const slideSpeed=progress<.48?8*Math.exp(-progress*3):0;p.vx=p.facingX*slideSpeed;p.vy=p.facingY*slideSpeed;}
+      else if(planted){p.vx=p.vy=0;}
+      else {p.vx += (mx * speed - p.vx) * lerp;p.vy += (my * speed - p.vy) * lerp;}
       p.x = Math.max(-29.5, Math.min(29.5, p.x + p.vx * dt));
       p.y = Math.max(-17.5, Math.min(17.5, p.y + p.vy * dt));
-      p.stride = (p.stride + (Math.hypot(p.vx, p.vy) * dt) / 2.4) % 1;
+      p.stride = (p.stride + (Math.hypot(p.vx, p.vy) * dt) / (1.1+Math.min(1,Math.hypot(p.vx,p.vy)/8)*1.3)) % 1;
     }
     for (let i = 0; i < 10; i++)
       for (let j = i + 1; j < 10; j++) {
@@ -605,7 +659,9 @@ export class Match {
     if (Math.abs(this.ball.x) > PITCH.halfLength) {
       if (Math.abs(this.ball.y) < PITCH.goalHalfWidth && this.ball.z < PITCH.goalHeight) {
         const team = this.ball.x > 0 ? 0 : 1;
-        this.score[team]++;
+        const tied=this.score[0]===this.score[1];this.score[team]++;
+        if(tied&&this.elapsed>this.duration*.85){this.lateLeadTeam=team;this.react('late-lead',team,1.5);}
+        this.shotFlight=null;
         this.kickoffTeam=1-team;
         this.passFlight=null;
         this.scorer = this.lastTouch;
@@ -621,6 +677,7 @@ export class Match {
         this.emit("goal");
         return;
       }
+      if(this.shotFlight){this.react(Math.abs(this.ball.y)<PITCH.goalHalfWidth+1.4?'near-goal':'miss',this.shotFlight.team,.8);this.shotFlight=null;}
       this.ball.x = Math.sign(this.ball.x) * (PITCH.halfLength-.1);
       this.ball.vx *= -0.65;
       this.owner = null;
@@ -634,7 +691,7 @@ export class Match {
     }
     if (this.owner === null && (this.lock === 0 || this.passFlight !== null) && this.ball.z < 1.6) {
       for (const p of this.players) {
-        if(p.id===this.lastTouch&&this.lock>0)continue;
+        if(p.recovery>0||(p.id===this.lastTouch&&this.lock>0))continue;
         if (p.action && p.action.kind !== "dive") continue;
         const dx = this.ball.x - previousBall.x,
           dy = this.ball.y - previousBall.y,
@@ -662,13 +719,14 @@ export class Match {
             : 1
           : this.passFlight?.receiver===p.id ? 1.1 : 0.75;
         if (dist < reach && (p.keeper || this.ball.z < 0.65)) {
-          const speed = Math.hypot(this.ball.vx, this.ball.vy);
+          if(this.training)p.stamina=1;
+      const speed = Math.hypot(this.ball.vx, this.ball.vy);
           const fromOpponent=this.players[this.lastTouch].team!==p.team;
           const completed=this.passFlight!==null&&this.players[this.lastTouch].team===p.team;
           this.lastTouch = p.id;
           if (p.keeper && fromOpponent && speed > 8) {
             this.saves[p.team]++;
-            this.emit("save");
+            this.emit("save");if(speed>21||dive)this.react('big-save',p.team,1.2);this.shotFlight=null;
           }
           if (p.keeper && fromOpponent && speed > 21) {
             // A hard shot is parried back into play, never teleported into possession.

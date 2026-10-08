@@ -15,7 +15,7 @@ export async function prepareCharacterAsset() {
       "/assets/characters/lagos-footballer.glb",
     );
     template = gltf.scene;
-    clips = gltf.animations;
+    clips = buildClips();
   } catch {
     template = buildFootballer().root;
     console.info("Using original local character source; GLB not available.");
@@ -23,6 +23,7 @@ export async function prepareCharacterAsset() {
 }
 export type CharacterRig = {
   root: THREE.Group;
+  footPlants?: {points:(THREE.Vector3|null)[];stance:boolean[];time:number;position:THREE.Vector3};
   hips: THREE.Bone;
   head: THREE.Bone;
   arms: THREE.Bone[];
@@ -216,7 +217,7 @@ export function animateCharacter(
   const running = Math.min(1, speed / 1.0),
     jogging=THREE.MathUtils.clamp((speed-1.8)/2.2,0,1),
     fast = THREE.MathUtils.clamp((speed - 6) / 2, 0, 1);
-  const weight = action ? actionWeight(action) : 0;
+  const weight = action && !action.turnRemaining ? actionWeight(action) : 0;
   set(
     keeper ? "keeper" : "idle",
     (1 - running) * (1 - weight),
@@ -245,48 +246,46 @@ export function animateCharacter(
     if(motion.recovery>0){rig.bones.spine.rotation.x+=.23;rig.arms[0].rotation.z-=.35;rig.arms[1].rotation.z+=.35;}
     if(motion.receive>0){const weight=motion.receive/.18;rig.legs[1].rotation.x-=.35*weight;rig.legs[1].rotation.y+=.3*weight;rig.knees[1].rotation.x+=.35*weight;rig.arms[0].rotation.z-=.2*weight;}
   }
-  // Two-bone foot placement during locomotion: a level sole on each stance, lifted on recovery.
-  if (!action && speed > 0.4 && !motion?.receive) {
-    for (let i = 0; i < 2; i++) {
-      const f = (cycle + i * 0.5) % 1,
-        stance = 0.42;
-      const length = Math.min(0.82, 0.24 + speed * 0.075);
-      let z: number, y: number;
-      if (f < stance) {
-        z = length * (0.5 - f / stance);
-        y = 0.09;
-      } else {
-        const swing = (f - stance) / (1 - stance);
-        z = length * (-0.5 + swing);
-        y = 0.09 + Math.sin(swing * Math.PI) * Math.min(.19,.06+speed*.017);
+  // Lock stance feet in world space. Reset on replay seeks / teleports, never accumulate rotations.
+  if(!action&&speed>.15)rig.hips.position.y-=Math.min(.075,speed*.018);
+  const planting=!action||action.kind==='pass'||action.kind==='shot'||!!action.turnRemaining;
+  rig.root.updateMatrixWorld(true);
+  let plants=rig.footPlants;
+  if(!plants||time<plants.time||rig.root.position.distanceTo(plants.position)>2){plants=rig.footPlants={points:[null,null],stance:[false,false],time,position:rig.root.position.clone()};}
+  for(let i=0;i<2;i++){
+    const f=((cycle+i*.5)%1+1)%1,stance=speed>4?.34:.42;
+    const plant=planting&&(action?i===0:f<stance||speed<.15);
+    const foot=rig.bones[i===0?'footL':'footR'];
+    if(!planting){plants.points[i]=null;plants.stance[i]=false;continue;}
+    // Keep the kicking leg's authored boot/ball contact.
+    if(action&&i===1){plants.points[i]=null;plants.stance[i]=false;continue;}
+    const strideLength=1.1+Math.min(1,speed/8)*1.3;
+    const reach=Math.min(.53,strideLength*stance*.5);
+    const swing=(f-stance)/(1-stance);
+    let z=speed<.15?.025:plant?reach*(1-2*f/stance):-reach+2*reach*(swing*swing*(3-2*swing));
+    let y=.09+(plant?0:Math.sin(Math.max(0,swing)*Math.PI)*Math.min(.23,.07+speed*.02));
+    if(plant){
+      if(!plants.stance[i]||!plants.points[i]){
+        const point=new THREE.Vector3(rig.legs[i].position.x,y,z);rig.root.localToWorld(point);point.y=.09*rig.root.scale.y;plants.points[i]=point;
       }
-      const dy = y - (rig.hips.position.y - 0.005),
-        d = Math.min(0.864, Math.hypot(dy, z));
-      const upper = 0.44,
-        lower = 0.425;
-      const thigh =
-        -Math.atan2(z, -dy) -
-        Math.acos(
-          THREE.MathUtils.clamp(
-            (upper * upper + d * d - lower * lower) / (2 * upper * d),
-            -1,
-            1,
-          ),
-        );
-      const knee =
-        Math.PI -
-        Math.acos(
-          THREE.MathUtils.clamp(
-            (upper * upper + lower * lower - d * d) / (2 * upper * lower),
-            -1,
-            1,
-          ),
-        );
-      rig.legs[i].rotation.x = thigh;
-      rig.knees[i].rotation.x = knee;
-      rig.bones[i === 0 ? "footL" : "footR"].rotation.x = -thigh - knee;
-    }
+      const point=rig.root.worldToLocal(plants.points[i]!.clone());z=point.z;y=point.y;
+      // Release an unreachable anchor rather than hyperextending a knee during a sharp cut.
+      if(Math.abs(z)>.58||Math.abs(point.x-rig.legs[i].position.x)>.24){plants.points[i]=null;plants.stance[i]=false;continue;}
+      rig.legs[i].rotation.z=THREE.MathUtils.clamp(Math.atan2(point.x-rig.legs[i].position.x,rig.hips.position.y-y),-.22,.22);
+    }else {plants.points[i]=null;rig.legs[i].rotation.z=0;}
+    plants.stance[i]=plant;
+    const dy=y-(rig.hips.position.y-.005),d=THREE.MathUtils.clamp(Math.hypot(dy,z),.45,.858),upper=.44,lower=.425;
+    const thigh=-Math.atan2(z,-dy)-Math.acos(THREE.MathUtils.clamp((upper*upper+d*d-lower*lower)/(2*upper*d),-1,1));
+    const knee=Math.PI-Math.acos(THREE.MathUtils.clamp((upper*upper+lower*lower-d*d)/(2*upper*lower),-1,1));
+    rig.legs[i].rotation.x=thigh;rig.legs[i].rotation.y=0;rig.knees[i].rotation.set(knee,0,0);foot.rotation.set(-thigh-knee,0,-rig.legs[i].rotation.z);
   }
+  if(action&&['slide','stumble','tackle'].includes(action.kind)){
+    rig.root.updateMatrixWorld(true);
+    const sole=Math.min(...['footL','footR'].map(name=>rig.bones[name as BoneName].localToWorld(new THREE.Vector3(0,-.045,.075)).y));
+    if(sole<.035)rig.hips.position.y+=(.035-sole)/rig.root.scale.y;
+  }
+  plants.time=time;plants.position.copy(rig.root.position);
+
 }
 
 export class SquadPreview {
@@ -331,7 +330,7 @@ export class SquadPreview {
     }).observe(host);
   }
   setColor(color: string) {
-    this.rigs.forEach((r) => {r.kit.color.set(color);r.kit.map=kitPattern(color);});
+    this.rigs.forEach((r) => {r.kit.color.set(color);r.kit.map=kitPattern(color);r.root.traverse(o=>{if(o instanceof THREE.Mesh){const materials=Array.isArray(o.material)?o.material:[o.material];materials.forEach(m=>{if(m.name==="kit-sleeve" && m instanceof THREE.MeshStandardMaterial)m.color.set(color);});}});});
   }
   setMotion(motion: typeof this.motion, time: number) {
     this.motion = motion;
