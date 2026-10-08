@@ -46,6 +46,7 @@ async function boot() {
     if(previousPage==='match'&&page!=='match'&&running&&match.state!=='PAUSED'&&match.state!=='FULL_TIME'){match.pause();updateOverlay();}
     if(page==='match'&&!running){router.go('setup');return;}
     if(page==='results'&&match.state!=='FULL_TIME'){router.go('home');return;}
+    if(page!=='match'&&document.fullscreenElement)void document.exitFullscreen().catch(()=>{});
     renderer.matchView=page==='match';
     $('#home-nav').classList.toggle('active',page==='home');$('#area-nav').classList.toggle('active',['clubs','squad','setup'].includes(page));
     document.querySelectorAll('[data-step]').forEach(el=>el.setAttribute('aria-current',el.getAttribute('data-step')===page?'step':'false'));
@@ -270,6 +271,10 @@ async function boot() {
     $("#camera-view").setAttribute('aria-label',`Camera: ${renderer.cameraMode}. Switch camera`);
   };
   const court=$('#court');
+  const fitViewport=()=>{document.documentElement.style.setProperty('--game-height',`${window.visualViewport?.height??window.innerHeight}px`);};
+  fitViewport();window.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('resize',fitViewport);
+  court.addEventListener('contextmenu',e=>e.preventDefault());
+
   $('.camera-tools').insertAdjacentHTML('afterbegin','<button id="zoom-out" aria-label="Zoom camera out">−</button><button id="zoom-in" aria-label="Zoom camera in">+</button>');
   const zoom=(delta:number)=>{renderer.cameraZoom=Math.max(.65,Math.min(1.6,renderer.cameraZoom+delta));};
   $('#zoom-in').onclick=()=>zoom(-.12);$('#zoom-out').onclick=()=>zoom(.12);
@@ -280,7 +285,7 @@ async function boot() {
   court.insertAdjacentHTML('beforeend','<div id="view-status" role="status" hidden></div>');
   let statusTimer=0;
   $('#fullscreen').onclick=async()=>{
-    try{if(document.fullscreenElement)await document.exitFullscreen();else if(court.requestFullscreen)await court.requestFullscreen();else throw new Error('Unavailable');}
+    try{if(document.fullscreenElement)await document.exitFullscreen();else if(window.matchMedia('(display-mode: standalone)').matches||(navigator as Navigator & {standalone?:boolean}).standalone){const status=$('#view-status');status.hidden=false;status.textContent='Already in app view. Rotate your phone for a wider pitch.';clearTimeout(statusTimer);statusTimer=window.setTimeout(()=>status.hidden=true,3500);}else if(court.requestFullscreen)await court.requestFullscreen();else throw new Error('Unavailable');}
     catch{const status=$('#view-status');status.hidden=false;status.textContent='This browser cannot hide its bars. Add to Home Screen for an app-sized view.';clearTimeout(statusTimer);statusTimer=window.setTimeout(()=>status.hidden=true,6500);}
   };
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').setAttribute('aria-label',document.fullscreenElement?'Exit fullscreen':'Fullscreen court');$('#fullscreen').setAttribute('aria-pressed',String(!!document.fullscreenElement));});
@@ -293,6 +298,7 @@ async function boot() {
   });
   function updateOverlay() {
     const overlay = $("#match-overlay");
+    if(match.state==='PAUSED')input.reset();
     overlay.hidden = !(match.state === "PAUSED" || match.state === "FULL_TIME");
     if (match.state === "PAUSED") {
       overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");overlay.setAttribute("aria-labelledby","pause-title");
@@ -425,7 +431,7 @@ async function boot() {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.addEventListener("visibilitychange", () => {
+  document.addEventListener("visibilitychange", () => {
     if (
       document.hidden &&
       running &&

@@ -5,6 +5,7 @@ const files=(await walk('dist')).filter(p=>!p.includes('/artifacts/')&&!p.includ
 const hash=createHash('sha256');for(const f of files)hash.update(await readFile(f));
 const cache=`lagos-app-${hash.digest('hex').slice(0,12)}`;
 await writeFile('dist/sw.js',`const CACHE=${JSON.stringify(cache)},CORE=${JSON.stringify(files.map(f=>f.slice(4)))};
+self.addEventListener('message',event=>{if(event.data?.type==='ACTIVATE_UPDATE')self.skipWaiting();});
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('lagos-app-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{const req=event.request,url=new URL(req.url);if(req.method!=='GET'||url.origin!==self.location.origin)return;

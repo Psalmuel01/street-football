@@ -9,3 +9,9 @@ The production-only service worker precaches the application, fonts, artwork, ch
 Camera zoom uses +/− or a two-finger pinch on the pitch. The chosen camera and zoom persist through replays. Fullscreen uses the browser API; unsupported browsers receive an honest home-screen suggestion. iPhone browser chrome cannot be programmatically hidden everywhere.
 
 Verification: `node scripts/mobile-hub-check.mjs` covers 1440×900, 390×844, 320×568 and 844×390, menu overflow, pause/resume, HUD bounds, fullscreen fallback and production offline launch. Screenshots are in `artifacts/mobile-hub/`. Emulation does not replace testing on a physical iPhone or Android device.
+
+## Touch and lifecycle follow-up
+
+Pointer ownership prevents a second finger stealing the stick or action button. Lost capture, cancellation, backgrounding and orientation changes release held inputs; button highlighting reflects touch state. The match uses the visual viewport and safe areas, with a more compact landscape control cluster. Installed standalone mode explains that app view is already active instead of attempting redundant fullscreen. Leaving the match exits native fullscreen so squad/setup pages remain visible.
+
+`node scripts/mobile-input-check.mjs` dispatches actual browser multi-touch events for steering+sprint+pass, cancellation, orientation resize, standalone mode and background/resume. Physical Safari and Android devices still require verification. The footer now shows an explicit update button when a production worker is waiting; activation is user-triggered outside the match.

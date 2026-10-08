@@ -11,5 +11,16 @@ export function setupInstall(){
  dialog.querySelector('#install-help')!.textContent=ios?'In Safari, tap Share, then Add to Home Screen and Open as Web App. Launch from that icon for the full app experience.':!window.isSecureContext?'Home-screen installation needs an HTTPS address on your phone. This local HTTP preview can still be played in your browser. Once hosted securely, use your browser’s Install app menu.':'Open your browser menu and choose Install app or Add to Home Screen. If it is unavailable, try Chrome on Android or Safari on iPhone.';dialog.showModal();};
  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e as InstallEvent;button.hidden=false;button.textContent='＋ INSTALL LAGOS STREET FOOTBALL';});
  window.addEventListener('appinstalled',()=>{button.hidden=true;deferred=null;});
- if(import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('/sw.js').catch(()=>{/* Installation remains available without offline support. */});});
+ if(import.meta.env.PROD&&'serviceWorker' in navigator){
+  const register=async()=>{try{
+   const registration=await navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'});
+   const update=document.createElement('button');update.id='update-app';update.hidden=true;update.textContent='↻ UPDATE APP';document.querySelector('footer')?.append(update);
+   const showUpdate=()=>{update.hidden=!registration.waiting;};showUpdate();
+   registration.addEventListener('updatefound',()=>{registration.installing?.addEventListener('statechange',showUpdate);});
+   let requested=false;update.onclick=()=>{if(document.body.classList.contains('in-match'))return;requested=true;registration.waiting?.postMessage({type:'ACTIVATE_UPDATE'});};
+   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(requested)location.reload();});
+   document.addEventListener('visibilitychange',()=>{if(!document.hidden){showUpdate();void registration.update().catch(()=>{});}});
+  }catch{/* The game remains playable if offline storage is unavailable. */}};
+  if(document.readyState==='complete')void register();else window.addEventListener('load',()=>void register(),{once:true});
+ }
 }

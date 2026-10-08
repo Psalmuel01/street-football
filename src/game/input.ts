@@ -107,13 +107,19 @@ export class InputManager {
     i.passAndMove ||= this.heldTouch.has("switch")&&i.pass;
     return i;
   }
+  reset() {
+    this.keys.clear();this.pressed.clear();this.touch=idle();this.heldTouch.clear();
+    document.querySelectorAll('[data-action]').forEach(el=>el.classList.remove('held'));
+    const stick=document.querySelector<HTMLElement>('#joystick');stick?.style.setProperty('--jx','0px');stick?.style.setProperty('--jy','0px');
+  }
   bindTouch() {
     const stick = document.querySelector<HTMLElement>("#joystick")!;
     let pointer: number | null = null;
     const move = (e: PointerEvent) => {
       const r = stick.getBoundingClientRect();
-      let x = (e.clientX - r.left - r.width / 2) / 38,
-        y = (e.clientY - r.top - r.height / 2) / 38;
+      let x = (e.clientX - r.left - r.width / 2) / (r.width*.35),
+        y = (e.clientY - r.top - r.height / 2) / (r.height*.35);
+      if(Math.hypot(x,y)<.12){x=0;y=0;}
       const d = Math.max(1, Math.hypot(x, y));
       this.touch.x = x / d;
       this.touch.y = y / d;
@@ -121,6 +127,8 @@ export class InputManager {
       stick.style.setProperty("--jy", `${(y / d) * 30}px`);
     };
     stick.onpointerdown = (e) => {
+      if(pointer!==null)return;
+      e.preventDefault();
       pointer = e.pointerId;
       stick.setPointerCapture(pointer);
       move(e);
@@ -134,17 +142,28 @@ export class InputManager {
       stick.style.setProperty("--jx", "0px");
       stick.style.setProperty("--jy", "0px");
     };
-    stick.onpointerup = stop;
-    stick.onpointercancel = stop;
+    const releaseStick=(e:PointerEvent)=>{if(e.pointerId===pointer)stop();};
+    stick.onpointerup = releaseStick;stick.onpointercancel = releaseStick;stick.onlostpointercapture=releaseStick;
+    const reset=()=>{stop();this.reset();};
+    window.addEventListener('blur',reset);
+    window.addEventListener('pagehide',reset);
+    window.addEventListener('orientationchange',reset);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});
     document.querySelectorAll<HTMLElement>("[data-action]").forEach((b) => {
       const action = b.dataset.action as keyof Input;
+      let heldPointer:number|null=null;
+      const clearButton=()=>{heldPointer=null;b.classList.remove('held');this.heldTouch.delete(action);if(action==='sprint')this.touch.sprint=false;};
+      window.addEventListener('blur',clearButton);window.addEventListener('pagehide',clearButton);window.addEventListener('orientationchange',clearButton);
+      document.addEventListener('visibilitychange',()=>{if(document.hidden)clearButton();});
       b.onpointerdown = (e) => {
+        if(heldPointer!==null)return;heldPointer=e.pointerId;b.classList.add("held");
         e.preventDefault();
         b.setPointerCapture(e.pointerId);
         this.heldTouch.add(action);
         if (action !== "x" && action !== "y") this.touch[action] = true;
       };
-      b.onpointerup = b.onpointercancel = () => {
+      b.onpointerup = b.onpointercancel = b.onlostpointercapture = (e) => {
+        if(e.pointerId!==heldPointer)return;heldPointer=null;b.classList.remove("held");
         this.heldTouch.delete(action);
         if (action === "sprint") this.touch.sprint = false;
       };
