@@ -1,3 +1,5 @@
+import {pauseMarkup} from './ui/pause';
+import {setupInstall} from './ui/install';
 import {resultsMarkup} from "./ui/results";
 import {type Formation} from "./content/formations";
 import {conditions,type Conditions} from "./content/conditions";
@@ -16,6 +18,7 @@ import { PitchRenderer } from "./game/renderer";
 import { SquadPreview, prepareCharacterAsset } from "./game/character";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = renderShell();
+setupInstall();
 let chosen = 0,
   playingTeam = 0,
   playingOpponent = 1,
@@ -256,7 +259,7 @@ async function boot() {
   $("#pause").onclick = () => input.pause();
   $('#home-nav').onclick=()=>router.go('home');
   $('#area-nav').onclick=(event)=>{event.preventDefault();router.go('clubs');};
-  $('#court').insertAdjacentHTML('beforeend','<div id="training-panel" hidden><strong>TRAINING GROUND</strong><select id="training-drill" aria-label="Training drill"><option value="free">Free practice</option><option value="through">Through-ball runs</option><option value="finishing">Finishing</option></select><p id="training-tip">No clock. No opponent press. Full energy.</p><span id="training-progress"></span><button id="reset-drill">RESET BALL ↺</button></div>');
+  $('#court').insertAdjacentHTML('beforeend','<details id="training-panel" hidden><summary>TRAINING GROUND <span>＋</span></summary><select id="training-drill" aria-label="Training drill"><option value="free">Free practice</option><option value="through">Through-ball runs</option><option value="finishing">Finishing</option></select><p id="training-tip">No clock. No opponent press. Full energy.</p><span id="training-progress"></span><button id="reset-drill">RESET BALL ↺</button></details>');
   const resetPractice=()=>{replay.clear();match.resetDrill($<HTMLSelectElement>('#training-drill').value as typeof match.drill);};
   $('#reset-drill').onclick=resetPractice;$('#training-drill').onchange=()=>{resetPractice();$<HTMLSelectElement>('#training-drill').blur();};
   $('#player-tag').insertAdjacentHTML('beforeend','<small class="sprint-hint">SHIFT / R1 · SPRINT</small>');
@@ -266,16 +269,35 @@ async function boot() {
     $("#camera-view").setAttribute('aria-pressed',String(renderer.cameraMode!=='broadcast'));
     $("#camera-view").setAttribute('aria-label',`Camera: ${renderer.cameraMode}. Switch camera`);
   };
-  $("#fullscreen").onclick = () => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void $("#court").requestFullscreen?.();
+  const court=$('#court');
+  $('.camera-tools').insertAdjacentHTML('afterbegin','<button id="zoom-out" aria-label="Zoom camera out">−</button><button id="zoom-in" aria-label="Zoom camera in">+</button>');
+  const zoom=(delta:number)=>{renderer.cameraZoom=Math.max(.65,Math.min(1.6,renderer.cameraZoom+delta));};
+  $('#zoom-in').onclick=()=>zoom(-.12);$('#zoom-out').onclick=()=>zoom(.12);
+  const touches=new Map<number,{x:number,y:number}>();let pinch=0;
+  court.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&(e.target as HTMLElement).tagName==='CANVAS'){touches.set(e.pointerId,{x:e.clientX,y:e.clientY});pinch=0;}});
+  court.addEventListener('pointermove',e=>{if(!touches.has(e.pointerId))return;touches.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touches.size===2){const [a,b]=[...touches.values()],distance=Math.hypot(a.x-b.x,a.y-b.y);if(pinch)zoom((pinch-distance)/250);pinch=distance;}});
+  for(const event of ['pointerup','pointercancel','pointerleave'])court.addEventListener(event,e=>{touches.delete((e as PointerEvent).pointerId);pinch=0;});
+  court.insertAdjacentHTML('beforeend','<div id="view-status" role="status" hidden></div>');
+  let statusTimer=0;
+  $('#fullscreen').onclick=async()=>{
+    try{if(document.fullscreenElement)await document.exitFullscreen();else if(court.requestFullscreen)await court.requestFullscreen();else throw new Error('Unavailable');}
+    catch{const status=$('#view-status');status.hidden=false;status.textContent='This browser cannot hide its bars. Add to Home Screen for an app-sized view.';clearTimeout(statusTimer);statusTimer=window.setTimeout(()=>status.hidden=true,6500);}
   };
+  document.addEventListener('fullscreenchange',()=>{$('#fullscreen').setAttribute('aria-label',document.fullscreenElement?'Exit fullscreen':'Fullscreen court');$('#fullscreen').setAttribute('aria-pressed',String(!!document.fullscreenElement));});
+  $('#match-overlay').addEventListener('keydown',event=>{
+    if(event.key!=='Tab')return;
+    const buttons=Array.from($('#match-overlay').querySelectorAll<HTMLButtonElement>('button'));
+    const first=buttons[0],last=buttons[buttons.length-1];
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+  });
   function updateOverlay() {
     const overlay = $("#match-overlay");
     overlay.hidden = !(match.state === "PAUSED" || match.state === "FULL_TIME");
     if (match.state === "PAUSED") {
-      overlay.innerHTML =
-        '<p class="eyebrow">TAKE A BREATHER</p><h2>The ground can wait.</h2><button class="primary" id="resume">BACK TO THE GAME ↗</button><button id="manage-paused">SQUAD & SUBSTITUTIONS</button><button id="setup">MATCH SETUP</button>';
+      overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");overlay.setAttribute("aria-labelledby","pause-title");
+      overlay.innerHTML = pauseMarkup(match,playingTeam,playingOpponent);
+      $('#resume').focus();
       $("#manage-paused").onclick=openLiveSquad;
       $("#setup").onclick = () => {
         router.go("setup");

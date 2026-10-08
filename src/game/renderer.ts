@@ -39,6 +39,7 @@ export class PitchRenderer {
   ball: THREE.Mesh;
   ring: THREE.Mesh;
   clock = 0;
+  cameraZoom = 1;
   cameraMode: "follow" | "broadcast" | "street" = "follow";
   cameraTarget = new THREE.Vector3(0, 0, -1);
   constructor(
@@ -473,7 +474,7 @@ export class PitchRenderer {
     const portrait=this.camera.aspect<1;
     const height=close?(portrait?13.5:this.cameraMode==='street'?gameplay.camera.streetHeight:gameplay.camera.followHeight):gameplay.camera.wideHeight;
     const depth=close?(portrait?17:this.cameraMode==='street'?gameplay.camera.streetDepth:gameplay.camera.followDepth):gameplay.camera.wideDepth;
-    const desiredCamera=new THREE.Vector3(focusX,height,depth+focusZ);
+    const desiredCamera=new THREE.Vector3(focusX,height*this.cameraZoom,depth*this.cameraZoom+focusZ);
     if(replay&&(!this.wasReplay||Math.abs(this.cameraTarget.x-focusX)>12)){
       this.camera.position.copy(desiredCamera);this.cameraTarget.set(focusX,1,focusZ-1);
     }else this.camera.position.lerp(desiredCamera,blend);

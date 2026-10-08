@@ -1,1 +1,22 @@
-{"provider":"Spitch","voice":"justice","language":"pcm","clips":{}}
+{
+  "provider": "Spitch",
+  "voice": "justice",
+  "language": "pcm",
+  "clips": {
+    "goal-1": {
+      "url": "/assets/audio/voices/native/goal-1-80c1eb8dab.mp3",
+      "hash": "80c1eb8dab341421fe36ce3875bb04b905dc170a1811e5c5d186e9a567de5f7b",
+      "text": "Na goal! What a finish!"
+    },
+    "goal-2": {
+      "url": "/assets/audio/voices/native/goal-2-6d2d2b43f9.mp3",
+      "hash": "6d2d2b43f901e184c4ca28a292924b23059b6cccdea0ff389cb9c68aa2e40288",
+      "text": "Omo, see goal! He place am well."
+    },
+    "goal-3": {
+      "url": "/assets/audio/voices/native/goal-3-de299b45a3.mp3",
+      "hash": "de299b45a39e72743b89746001828dbffc977fc2fcc777f19d36a087aa894796",
+      "text": "Yes! That one enter clean!"
+    }
+  }
+}
