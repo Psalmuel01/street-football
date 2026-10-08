@@ -1,60 +1,116 @@
 # Lagos Street Football
 
-Original Lagos-inspired 5-a-side football. First playable local vertical slice.
+A Lagos-inspired, local 5-a-side football game built with TypeScript, Three.js and Vite. Choose a community, pick your five and play on a neighbourhood concrete court. The game uses original stylized characters; the illustrated cover is not a gameplay screenshot.
+
+## Run locally
+
+Use Node.js 22 LTS and npm.
 
 ```sh
-npm install
+npm ci
 npm run dev
+```
+
+Open http://localhost:5173/. To test on a phone, connect it to the same Wi-Fi and open the **Network** address printed by Vite. `localhost` on your phone refers to the phone, not your computer. Your computer must allow incoming connections to port 5173.
+
+```sh
+npm test
+npm run build
+npx vite preview --host 0.0.0.0 --port 4173
+```
+
+The build generates `dist/`, including the production service worker. Deploy that directory on an HTTPS static host. Preview serves the production build; the development server does not register the service worker.
+
+## What's playable
+
+- Four communities, squad selection, formations, tactics and rolling substitutions.
+- Quick matches with configurable conditions: golden hour, night and rain.
+- Practice with no running clock, full stamina, passive outfield opposition, an active keeper, and resettable through-ball/finishing drills.
+- Directional passing, through balls, sprinting, skills, keeper saves, sliding tackles, fouls and restarts.
+- Goals, contextual crowd reactions, replays, a pause hub and a match report. The conceding team takes the kickoff.
+- Follow, Wide and Street cameras, camera zoom, keyboard/gamepad/touch input and home-screen installation.
+
+Use the squad button beside Pause to manage players during a match. Replay uses the selected camera and zoom. Multiplayer, phone-as-controller, tournaments and persistent progression are not implemented.
+
+## Controls
+
+Attack the right goal. The glowing ring identifies your controlled player.
+
+| Action | Keyboard | Controller / touch |
+| --- | --- | --- |
+| Move | WASD / arrows | Left stick / on-screen stick |
+| Short pass | Space | ✕ |
+| Through pass | K | △ |
+| Shoot | J | □ |
+| Lofted pass / defensive slide | L | ○ |
+| Sprint | Hold Shift | Hold R1 / RB |
+| Switch player | Q | L1 |
+| Skill | E | R2 on controller |
+| Pass and move | Q + Space | L1 + ✕ |
+| Contain / second press / keeper rush | Hold Space / J / K | Hold ✕ / □ / △ |
+| Pause | Escape | Start / pause button |
+
+**K is a through pass in possession and keeper rush when defending.** Aim with your movement direction. Sprint consumes stamina in matches. Sliding tackles commit the player to a recovery; mistimed contact can concede a foul.
+
+The bottom-right toolbar switches cameras, zooms with **+ / −**, and requests fullscreen. Two-finger pitch gestures also control camera zoom. Landscape offers more room on phones. How to Play contains graphics and audio settings.
+
+## Mobile and home-screen installation
+
+Use the footer's **Install app** button on a supported browser. On iPhone, open the HTTPS site in Safari and choose **Share → Add to Home Screen**, then launch its icon. Installed mode already provides an app view; browser fullscreen support varies by device.
+
+A plain HTTP LAN address is useful for gameplay testing but does not provide secure-context service-worker support on a phone. Use HTTPS for production installation tests.
+
+The production service worker stores the app shell, fonts, artwork and character assets after an initial online visit. Audio remains online-only. When an update is waiting, the footer offers **Update app**; activation is explicit and unavailable during a match. Touch state resets after interruptions, and backgrounding pauses the match.
+
+Browser automation covers multiple screen sizes and multi-touch signals. It does **not** certify every physical iPhone/Android browser. See [mobile and installation notes](docs/MOBILE-AND-INSTALL.md).
+
+## Audio and commentary
+
+Enable music through the music control; browsers require user interaction for playback. The audio system includes generated instrumental tracks, the bundled licensed **The Afrobeat — FASSounds**, match effects and contextual commentary. Credits and license links are shown in How to Play.
+
+Native commentary uses local clips exported through the Spitch integration. The repository includes a native-voice manifest and recordings; missing lines fall back to captions/crowd effects. Voice authenticity and delivery still require listening review.
+
+To generate or replace recordings, copy `.env.example` to `.env`, set your own `SPITCH_API_KEY`, then run:
+
+```sh
+npm run voices:plan
+npm run voices:build -- --event=goal
+npm run voices:build
+```
+
+Generation can incur provider charges. Credentials are build-time only: never prefix them with `VITE_` or commit `.env`. See [native voice setup](docs/NATIVE-VOICE.md).
+
+## Verification and development
+
+```sh
 npm test
 npm run build
 ```
 
-Open the Vite URL, choose a community and press **Play ball**. Attack the right goal. WASD/arrows move; Shift sprint; Space pass; J shoot; K through pass; L loft/tackle; Q switch; E skill; Escape pause. Standard gamepads and touch controls have input adapters.
-
-Includes one procedural 3D court, four community kits, 5v5 AI, configurable matches, score/time, pause, results and a practice match. Match audio includes original music, synthesized effects and bundled Nigerian-English Pidgin callouts. This is not yet an online game or installable PWA.
-
-See [architecture and roadmap](docs/ARCHITECTURE.md) for the repository assessment, multiplayer design, model, performance strategy, milestones and known limitations.
-
-Browser checks (with the dev server running):
+Browser checks require a running development server. Install Playwright's Chromium and recording dependency, or use an installed Chrome where supported:
 
 ```sh
-npx playwright install chromium
-node scripts/browser-check.mjs
-node scripts/input-check.mjs
-node scripts/matchday-check.mjs
-node scripts/replay-check.mjs
-node scripts/conditions-audio-check.mjs
+npx playwright install chromium ffmpeg
+npm run test:animation
+node scripts/controls-practice-check.mjs
+node scripts/locomotion-check.mjs
+node scripts/mobile-input-check.mjs
+node scripts/mobile-hub-check.mjs
 ```
 
-Alternatively set `CHROME_PATH` to an installed Chrome executable. Input checks emulate device signals; they do not certify physical gamepad or phone performance.
+`mobile-hub-check.mjs` also requires the production preview on port **4173**. The locomotion and mobile scripts currently target macOS Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`; adjust their `executablePath` on other systems. Other browser scripts accept `CHROME_PATH`. Screenshots, metrics and recordings are written under `artifacts/`.
 
-The character pass adds a reusable skinned GLB, timed pass/shot contact, standing tackles, keeper catches/parries and goal celebrations. Use **Stand / Run / Shoot / Tackle / Save** in the squad preview, or switch **Follow / Wide** on the court for a closer view. These characters remain stylized.
+`npm run assets:character` regenerates the original GLB with the development server running. F3 opens the development football readout. Gameplay tuning lives in `src/game/gameplay.config.ts`.
 
-```sh
-npm run assets:character  # regenerate the original GLB; requires running dev server
-npm run test:animation    # validate rig/contact and render a motion study
-```
+Further notes:
 
-Asset provenance and constraints are recorded in `public/assets/characters/README.md`.
+- [Locomotion fixes and motion checks](docs/LOCOMOTION-FIX.md)
+- [Gameplay polish](docs/GAMEPLAY-POLISH.md)
+- [Architecture and roadmap](docs/ARCHITECTURE.md)
+- [V2 football architecture](docs/V2-ARCHITECTURE.md)
+- [Original-spec audit](docs/MASTER-PROMPT-AUDIT.md) — historical; some items have since shipped.
+- [Character asset provenance](public/assets/characters/README.md)
 
-### Visual and controls update
-The landing uses rounded raised cards, self-hosted Teko display headings and Sora interface labels. Original cover art is labelled separately from actual gameplay. The match has a textured concrete surface, weathered buildings, moving vehicles and pavement pedestrians. Characters remain original stylized skinned models; the game is not photorealistic.
+## Repository hygiene
 
-Touch/controller actions: ✕ pass, △ ground through ball, □ shoot, ○ lofted pass when in possession / tackle when defending. L1 switches players; R1 holds sprint. Keyboard: Space pass, K through, J shoot, L loft/tackle, Q switch, Shift sprint, E skill.
-
-Music is an original 106 BPM Naija-inspired synthesized instrumental, **Lagos After Hours**, composed in `src/game/audio/composition.ts` without sampled songs. Tap Music or the record player to enable playback. Volume and effects settings persist; music starts only after interaction and ducks during matches. Build source: `scripts/build-music.mjs`; distribution: `public/assets/audio/lagos-after-hours.m4a`.
-
-### Matchday flows and current scope
-Open `/#/home`, `/#/clubs`, `/#/squad` or `/#/setup`. Choose a starter and a reserve to edit the five. During a match, use the squad icon beside Pause to make rolling substitutions or choose the controlled player. Closing squad management returns to that match. Tap/click a player on the pitch or use L1/Q to switch.
-
-The default follow camera now shows part of a 60 × 36 metre court. The radar shows offscreen players; FOLLOW/WIDE changes the view. Goals trigger a short recorded-state replay with skip and pause support, then the conceding side restarts with possession. Press ✕/Space for your kick-off pass.
-
-Setup offers golden hour, floodlit night and rain. Wet conditions reduce grip and increase ball skid. In How to Play, voice and effects controls accompany music volume. Pidgin callouts use bundled generic Nigerian-English synthesized voices; they are not recordings of actual residents or public figures.
-
-The complete original-spec audit is in [docs/MASTER-PROMPT-AUDIT.md](docs/MASTER-PROMPT-AUDIT.md). PWA, phone-as-controller, multiplayer, King of the Pitch, tournaments, online spectators and progression remain unimplemented. The cover is illustration; the playable models do not yet match its photorealism.
-
-### V2 football-feel work
-
-Passes now select an open directional outlet and predict its meeting point once at boot contact. They no longer home toward a teammate after launch. Triangle leads a run into space; a pass pressed within 0.32 seconds before reception is buffered for one-touch play. Hold L1/Q with pass for pass-and-move. When defending, hold Cross/Space to contain, Square/J for a second presser, or Triangle/K to rush the keeper. Circle/L remains the standing tackle.
-
-In development, F3 shows the football tuning readout. Physics/decision constants live in `src/game/gameplay.config.ts`; target selection lives in `src/game/football/passing.ts`. See `docs/V2-ARCHITECTURE.md` for the audit and outstanding quality work. Full-match recordings are scripted playtests, not physical phone or human enjoyment validation.
+`.DS_Store` files hold macOS Finder folder preferences. They are not app assets and should not be committed. Git ignores them at every directory level; Finder may recreate local copies harmlessly. Dependencies, production builds, local secrets and test-runner caches are also ignored.
