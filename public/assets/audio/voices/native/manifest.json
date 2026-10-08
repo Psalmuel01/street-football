@@ -17,6 +17,231 @@
       "url": "/assets/audio/voices/native/goal-3-de299b45a3.mp3",
       "hash": "de299b45a39e72743b89746001828dbffc977fc2fcc777f19d36a087aa894796",
       "text": "Yes! That one enter clean!"
+    },
+    "kickoff-1": {
+      "url": "/assets/audio/voices/native/kickoff-1-f4c580e668.mp3",
+      "hash": "f4c580e668aff7ab22c763683a0b8a3f93274951d418ac4e3ed145525331fd03",
+      "text": "Oya, make we start. Play ball!"
+    },
+    "kickoff-2": {
+      "url": "/assets/audio/voices/native/kickoff-2-1ee8540d94.mp3",
+      "hash": "1ee8540d942657027d775fdf0c324bb890ba07391ed962a000a02e5b21223f02",
+      "text": "Everybody ready? Oya, let's go."
+    },
+    "save-1": {
+      "url": "/assets/audio/voices/native/save-1-12026eaa59.mp3",
+      "hash": "12026eaa597386485a0ca058cbbff4f612f0ee6b1c9a423cbb0c223180615704",
+      "text": "Good hands from the keeper."
+    },
+    "save-2": {
+      "url": "/assets/audio/voices/native/save-2-da794de4f5.mp3",
+      "hash": "da794de4f53009b3ed83f04c95c81a484ce92da94cfa8b4c7f5b89c93707c59a",
+      "text": "Keeper hold am. No second chance."
+    },
+    "big-save-1": {
+      "url": "/assets/audio/voices/native/big-save-1-f17ac3e422.mp3",
+      "hash": "f17ac3e4225293b4b33edbec5ac5cbc3683f4fe82c078bff371a47fccadc375c",
+      "text": "Ah! Keeper, you save your people there!"
+    },
+    "big-save-2": {
+      "url": "/assets/audio/voices/native/big-save-2-f5890a1289.mp3",
+      "hash": "f5890a1289c6ba2f63808fa394cd9e2e38aefb79006374bc6b1259420895a1c8",
+      "text": "How he take save that one? Correct keeper!"
+    },
+    "big-save-3": {
+      "url": "/assets/audio/voices/native/big-save-3-7e5f3a607c.mp3",
+      "hash": "7e5f3a607ca796f585b4203ebafe1f1725c9ee9bc4497a4708440b4d433c1969",
+      "text": "Omo! That save big well well!"
+    },
+    "miss-1": {
+      "url": "/assets/audio/voices/native/miss-1-14b14b3c6e.mp3",
+      "hash": "14b14b3c6ebb54e609a9b676866ce9e217e85beadd5dc4688be365d29c8f7716",
+      "text": "Ah ah, you for bury that one!"
+    },
+    "miss-2": {
+      "url": "/assets/audio/voices/native/miss-2-7a2c602ca1.mp3",
+      "hash": "7a2c602ca1ae9a56626359020a3e90b3be43559d83a2e2f99206bd40a4f0cb0b",
+      "text": "That chance don go. Head up, keep playing."
+    },
+    "miss-3": {
+      "url": "/assets/audio/voices/native/miss-3-018a3bd02b.mp3",
+      "hash": "018a3bd02b78dba8d9ae988f56ec75e056d0af01d0a26375abb79149d7be772b",
+      "text": "He get space, but the finish no follow."
+    },
+    "near-goal-1": {
+      "url": "/assets/audio/voices/native/near-goal-1-76d061629e.mp3",
+      "hash": "76d061629e944950cac2945cd17aeb1c6ef4b2a6c9f0479faec6bafd132e4bfe",
+      "text": "Chai! Small thing remain!"
+    },
+    "near-goal-2": {
+      "url": "/assets/audio/voices/native/near-goal-2-de5f378a9e.mp3",
+      "hash": "de5f378a9e5e820ebea8a370c8ff816e5313dd15cedc082c190d889324a18821",
+      "text": "That one nearly enter o!"
+    },
+    "near-goal-3": {
+      "url": "/assets/audio/voices/native/near-goal-3-6757d9cd32.mp3",
+      "hash": "6757d9cd32497f096daaef7e1416ece65a58b8a5d50735eba088f94f433482bc",
+      "text": "Just outside! The keeper don already fear."
+    },
+    "tackle-1": {
+      "url": "/assets/audio/voices/native/tackle-1-f7e890d55c.mp3",
+      "hash": "f7e890d55cc9f26b5eef7e6acf84793931058ff6586f046232e0cf77bbe7d208",
+      "text": "Clean tackle. Play on!"
+    },
+    "tackle-2": {
+      "url": "/assets/audio/voices/native/tackle-2-aba7cade06.mp3",
+      "hash": "aba7cade060de15c873aeffc77f53819d2ac49fa7a39dfc6755489459f64176a",
+      "text": "He time that one well."
+    },
+    "hard-tackle-1": {
+      "url": "/assets/audio/voices/native/hard-tackle-1-0e3f7869aa.mp3",
+      "hash": "0e3f7869aa0707ad32f53d4c79cfba04572f3b747ef1e76e3f8746ab53ce8e83",
+      "text": "Strong challenge! He get the ball first."
+    },
+    "hard-tackle-2": {
+      "url": "/assets/audio/voices/native/hard-tackle-2-665e4d138c.mp3",
+      "hash": "665e4d138c951cad2de83203961edd05cdeb9a18f431449d1897e31b95a90851",
+      "text": "Correct sliding tackle. But who go collect the loose ball?"
+    },
+    "foul-1": {
+      "url": "/assets/audio/voices/native/foul-1-e8b12eb955.mp3",
+      "hash": "e8b12eb9552fe8f4e287f8138f74e0500f2c0a5f60817d9f0b6e2fffe10c0a2a",
+      "text": "Referee don blow. You catch the leg, not the ball."
+    },
+    "foul-2": {
+      "url": "/assets/audio/voices/native/foul-2-07e626fe81.mp3",
+      "hash": "07e626fe81e67f7d7d091a1ea13674f54d0ed4bf68ea27e6f9e4efd9968f58ba",
+      "text": "Too late! That's a foul."
+    },
+    "foul-3": {
+      "url": "/assets/audio/voices/native/foul-3-c828dd5986.mp3",
+      "hash": "c828dd59865f54a08a8884ddff6373d8a876e685f3ae6eb39158c1149c2460e0",
+      "text": "Easy now. You cannot go through the player like that."
+    },
+    "free-kick-1": {
+      "url": "/assets/audio/voices/native/free-kick-1-be53089934.mp3",
+      "hash": "be530899349465727110189f57fb2316a560da7cf20753078a6ad512816a240f",
+      "text": "Free kick. Give them space."
+    },
+    "free-kick-2": {
+      "url": "/assets/audio/voices/native/free-kick-2-9f8589cb5c.mp3",
+      "hash": "9f8589cb5c28b84c6c210e9fa5e673849309f5e1c5a000a321d8d034a333d31a",
+      "text": "Oya, arrange yourselves. Free kick."
+    },
+    "penalty-1": {
+      "url": "/assets/audio/voices/native/penalty-1-3018d3596f.mp3",
+      "hash": "3018d3596f46bf386f8f543f6cd31a5f14fb17fa1c87ea95136b24c38f3f90e0",
+      "text": "Penalty! The foul happen inside the area."
+    },
+    "penalty-2": {
+      "url": "/assets/audio/voices/native/penalty-2-dc005fb082.mp3",
+      "hash": "dc005fb0829e7f8d317225b34fb0566341316427e204f8e6910c56206ef6ef01",
+      "text": "Referee point to the spot. Na penalty."
+    },
+    "skill-1": {
+      "url": "/assets/audio/voices/native/skill-1-c9ad4d7fc1.mp3",
+      "hash": "c9ad4d7fc115cf0a0fb1e14776aed1da3e4e5a4cd1eaec73f470e4219474df1a",
+      "text": "See footwork!"
+    },
+    "skill-2": {
+      "url": "/assets/audio/voices/native/skill-2-3f98a74cac.mp3",
+      "hash": "3f98a74caca740f04364e329f7db4be77bd1c657209dd66dad4de65547561fe9",
+      "text": "Soft touch. Keep am moving."
+    },
+    "nutmeg-1": {
+      "url": "/assets/audio/voices/native/nutmeg-1-758a6f6a35.mp3",
+      "hash": "758a6f6a35b80bf46849726c86901b40b911357c9bd92bb93e9125716ec34cf5",
+      "text": "Ah! Between the legs!"
+    },
+    "nutmeg-2": {
+      "url": "/assets/audio/voices/native/nutmeg-2-c18236fc0f.mp3",
+      "hash": "c18236fc0f96cd04f9b965ecf5eb1aef73d5db0ba0d6ddf14adfd930163e80c0",
+      "text": "Omo, he sell am! Ball pass through!"
+    },
+    "nutmeg-3": {
+      "url": "/assets/audio/voices/native/nutmeg-3-ab6347a472.mp3",
+      "hash": "ab6347a4724421f6bd2a17c8b160a75f986b0df4b55e37c18b2a1dfb6b8eaee9",
+      "text": "See nutmeg! The crowd don wake up!"
+    },
+    "late-lead-1": {
+      "url": "/assets/audio/voices/native/late-lead-1-e8229f47d2.mp3",
+      "hash": "e8229f47d27c63df9f1b943673de23763b1db341621badc999cb7fc464346259",
+      "text": "They don take the lead! Time no plenty again!"
+    },
+    "late-lead-2": {
+      "url": "/assets/audio/voices/native/late-lead-2-c8a0ab6181.mp3",
+      "hash": "c8a0ab61815015aa2274077ed11f5fe27079a0a3c0ff4e99e74e3d67aa1e3fd9",
+      "text": "Late goal! Can they hold on now?"
+    },
+    "late-winner-1": {
+      "url": "/assets/audio/voices/native/late-winner-1-2292a12119.mp3",
+      "hash": "2292a121197f30e8b7381ebf15c134aea94740102eb9dc178ce77dd8a783ee74",
+      "text": "That late goal settle am! Bragging rights secured!"
+    },
+    "late-winner-2": {
+      "url": "/assets/audio/voices/native/late-winner-2-35b3bef4bb.mp3",
+      "hash": "35b3bef4bb37fdc3ad78ca47c2f78499157c5c44ba5f4c70334abe5bdea040ba",
+      "text": "They leave am late, but they carry the win!"
+    },
+    "close-match-1": {
+      "url": "/assets/audio/voices/native/close-match-1-b39984d682.mp3",
+      "hash": "b39984d68270cdd5f585bf01d99466d51d2d1ce467ffbf48b5a2df83147373e1",
+      "text": "This game tight o. One chance fit change everything."
+    },
+    "close-match-2": {
+      "url": "/assets/audio/voices/native/close-match-2-95a5a90686.mp3",
+      "hash": "95a5a906864715f9881b75776494a553cda3436b0acad398ec134f356fae57be",
+      "text": "Nobody fit relax now. The score still close."
+    },
+    "substitution-1": {
+      "url": "/assets/audio/voices/native/substitution-1-d4440d5fc3.mp3",
+      "hash": "d4440d5fc3de13d6189d6b69c14edc56a642b1d7c79bad4e5cdd7926d82765c1",
+      "text": "Fresh legs don enter. Make we see wetin go change."
+    },
+    "substitution-2": {
+      "url": "/assets/audio/voices/native/substitution-2-85193cbd88.mp3",
+      "hash": "85193cbd88392a4fa7803f0e938cc51ff4f80bde2e1a299cc296ce0438e163c5",
+      "text": "Change of personnel. Oya, make your impact."
+    },
+    "fulltime-1": {
+      "url": "/assets/audio/voices/native/fulltime-1-ddc754c7f2.mp3",
+      "hash": "ddc754c7f2054adb539e6d2488235cbf05930db8bd919ec4d182fc15a8f9a03a",
+      "text": "Full time. Well played, everybody."
+    },
+    "fulltime-2": {
+      "url": "/assets/audio/voices/native/fulltime-2-89aa3f3d20.mp3",
+      "hash": "89aa3f3d2012273f0c644f5ec24fe9f1a4229c43b7f2181c317d644c01169552",
+      "text": "That's the final whistle. Respect to both sides."
+    },
+    "atmosphere-1": {
+      "url": "/assets/audio/voices/native/atmosphere-1-a2b83f787e.mp3",
+      "hash": "a2b83f787ec682803fd95fadf15da6e4b49be2d37d29e9c3cbcdd592658ef9cb",
+      "text": "Your people dey watch. Keep the ball moving."
+    },
+    "atmosphere-2": {
+      "url": "/assets/audio/voices/native/atmosphere-2-eaa58dd21b.mp3",
+      "hash": "eaa58dd21b8c1a4fae55c25bf7e4fcfa887f41759ba2a9df4a044f2a7d3735d1",
+      "text": "Oya, communicate! Help your teammate."
+    },
+    "pass-1": {
+      "url": "/assets/audio/voices/native/pass-1-f8742854df.mp3",
+      "hash": "f8742854df65b6bee252de32d224b085505922451fdc594f70f8b593ed50cc4d",
+      "text": "Good ball. Move into space."
+    },
+    "pass-2": {
+      "url": "/assets/audio/voices/native/pass-2-2d106b3667.mp3",
+      "hash": "2d106b3667ec9a2db6a8937a5c5248ee252f778ba5ab0b4691d3b07e4e422806",
+      "text": "Correct pass. Keep it simple."
+    },
+    "shot-1": {
+      "url": "/assets/audio/voices/native/shot-1-fbea3d401f.mp3",
+      "hash": "fbea3d401f0fdd0cf3cb4421aab124da5be6e87920a05ba16d7a2b2913bdfcea",
+      "text": "He don shoot!"
+    },
+    "shot-2": {
+      "url": "/assets/audio/voices/native/shot-2-d7993fa486.mp3",
+      "hash": "d7993fa486e369dc9b75e4148b5ec72adc488da2fee2e20a14c2df1125ff8964",
+      "text": "Chance to shoot!"
     }
   }
 }
