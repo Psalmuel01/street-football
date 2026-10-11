@@ -8,3 +8,12 @@ playwright-report/
 
 # macOS Finder metadata (all directories)
 .DS_Store
+
+# Generated captures, review media, reports, and launch renders
+/artifacts/
+
+# Generated video renders and recordings
+*.mp4
+*.webm
+*.mov
+*.mkv

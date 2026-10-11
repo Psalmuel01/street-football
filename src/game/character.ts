@@ -4,27 +4,46 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
 import { buildFootballer, type BoneName } from "./assets/footballer";
 import { buildClips, type ClipName } from "./animation/clips";
-import { actionWeight, type PlayerAction } from "./animation/actions";
+import { capturedFootContacts } from "./animation/IKController";
+import capturedGaits from "./assets/cmu-gaits.json";
+import { selectMotionPack, clipDuration } from "./animation/AssetPipeline";
+import { evaluateAnimation, type LocomotionState } from "./animation/AnimationGraph";
+import { type PlayerAction } from "./animation/actions";
 
 let template: THREE.Group | null = null;
 let crowdTemplate: THREE.Group | null = null;
-let clips = buildClips();
+function prototypeClips() {
+  const clips = buildClips();
+  for (const captured of capturedGaits.clips) {
+    const index = clips.findIndex(clip => clip.name === captured.name);
+    if (index >= 0) clips[index] = THREE.AnimationClip.parse({uuid: THREE.MathUtils.generateUUID(), blendMode: THREE.NormalAnimationBlendMode, ...captured});
+  }
+  return clips;
+}
+let clips = prototypeClips();
+export let characterMotionSource = "captured-locomotion-evaluation";
 export async function prepareCharacterAsset() {
   try {
     const gltf = await new GLTFLoader().loadAsync(
       "/assets/characters/lagos-footballer.glb",
     );
     template = gltf.scene;
-    clips = buildClips();
+    const motion = selectMotionPack(gltf.animations, prototypeClips(), gltf.scene.userData.motion);
+    clips = motion.clips;
+    characterMotionSource = motion.source === "procedural-prototype" ? "captured-locomotion-evaluation" : motion.source;
   } catch {
     template = buildFootballer().root;
+    clips = prototypeClips(); characterMotionSource = "captured-locomotion-evaluation";
     console.info("Using original local character source; GLB not available.");
   }
 }
 export type CharacterRig = {
   root: THREE.Group;
+  motionSource: string;
   footPlants?: { points: (THREE.Vector3 | null)[]; stance: boolean[]; time: number; position: THREE.Vector3 };
   authoredPose?: { bone: THREE.Bone; rotation: THREE.Quaternion; position: THREE.Vector3 }[];
+  locomotionState?: LocomotionState;
+  motionSample?: {time: number; speed: number; braking: boolean};
   hips: THREE.Bone;
   head: THREE.Bone;
   arms: THREE.Bone[];
@@ -176,6 +195,7 @@ export function createCharacter(
   }
   return {
     root,
+    motionSource: characterMotionSource,
     bones,
     hips: bones.pelvis,
     head: bones.head,
@@ -220,19 +240,18 @@ export function animateCharacter(
     clip.time = THREE.MathUtils.clamp(t, 0, clip.getClip().duration - 0.000001);
     clip.setEffectiveWeight(weight);
   };
-  const running = Math.min(1, speed / 1.0),
-    jogging = THREE.MathUtils.clamp((speed - 1.8) / 2.2, 0, 1),
-    fast = THREE.MathUtils.clamp((speed - 6) / 2, 0, 1);
-  const weight = action && !action.turnRemaining ? actionWeight(action) : 0;
-  set(
-    keeper ? "keeper" : "idle",
-    (1 - running) * (1 - weight),
-    time % (keeper ? 2 : 4),
-  );
+  const previous = rig.motionSample;
+  const braking = previous && time === previous.time ? previous.braking : !!previous && time > previous.time && speed < previous.speed - .05;
+  const travelAngle = motion && speed > .15 ? Math.atan2(motion.vx * motion.facingY - motion.vy * motion.facingX, motion.vx * motion.facingX + motion.vy * motion.facingY) : 0;
+  const graph = evaluateAnimation(speed, action, travelAngle, braking);
+  rig.locomotionState = graph.state;
+  rig.motionSample = {time, speed, braking};
+  const fast = THREE.MathUtils.clamp((speed - 6) / 2, 0, 1);
+  set(keeper ? "keeper" : "idle", graph.weights.idle, time % clipDuration(rig.actions, keeper ? "keeper" : "idle"));
   const cycle = stride ?? time * (speed > 7 ? 2.1 : 1.6) + phase;
-  set("walk", running * (1 - jogging) * (1 - weight), cycle % 1);
-  set("run", running * jogging * (1 - fast) * (1 - weight), (cycle % 1) * 0.64);
-  set("sprint", running * fast * (1 - weight), (cycle % 1) * 0.48);
+  set("walk", graph.weights.walk, (cycle % 1) * clipDuration(rig.actions, "walk"));
+  set("run", graph.weights.run, (cycle % 1) * clipDuration(rig.actions, "run"));
+  set("sprint", graph.weights.sprint, (cycle % 1) * clipDuration(rig.actions, "sprint"));
   if (action) {
     const name: ClipName =
       action.kind === "dive"
@@ -240,7 +259,7 @@ export function animateCharacter(
           ? "diveLeft"
           : "diveRight"
         : action.kind;
-    set(name, weight, action.elapsed);
+    set(name, graph.weights.action, action.elapsed);
   }
   rig.mixer.update(0);
   if (!rig.authoredPose) rig.authoredPose = Object.values(rig.bones).map(bone => ({bone, rotation: bone.quaternion.clone(), position: bone.position.clone()}));
@@ -248,23 +267,32 @@ export function animateCharacter(
   if (motion && !action) {
     const lateral = motion.vx * motion.facingY - motion.vy * motion.facingX;
     const forward = motion.vx * motion.facingX + motion.vy * motion.facingY;
-    rig.bones.spine.rotation.z -= THREE.MathUtils.clamp(lateral * .045, -.23, .23);
-    rig.bones.spine.rotation.x += THREE.MathUtils.clamp(forward * .009, -.10, .08);
+    // Captured locomotion already contains weight transfer; do not layer a velocity lean over it.
+    if (rig.motionSource === "procedural-prototype") {
+      rig.bones.spine.rotation.z -= THREE.MathUtils.clamp(lateral * .045, -.23, .23);
+      rig.bones.spine.rotation.x += THREE.MathUtils.clamp(forward * .009, -.10, .08);
+    }
     if (motion.recovery > 0) { rig.bones.spine.rotation.x += .08 * Math.min(1,motion.recovery/.3); rig.arms[0].rotation.z -= .35; rig.arms[1].rotation.z += .35; }
     if (motion.receive > 0) { const weight = Math.min(1,motion.receive / .18); rig.legs[1].rotation.x -= .35 * weight; rig.legs[1].rotation.y += .3 * weight; rig.knees[1].rotation.x += .35 * weight; rig.arms[0].rotation.z -= .2 * weight; }
   }
   // Locomotion owns the lower body. Feet trace a stance/swing cycle and stance
   // anchors stay in world space, including during a turn. Action clips retain
   // their authored contact pose.
-  const planting = !action || ['pass','shot','tackle'].includes(action.kind);
+  const capturedLocomotion = !action && rig.motionSource !== "procedural-prototype";
+  const planting = (!action && !capturedLocomotion) || !!action && ['pass','shot','tackle'].includes(action.kind);
   const travel = THREE.MathUtils.smoothstep(speed,0,1);
-  if (!action && !keeper) rig.hips.position.y = THREE.MathUtils.lerp(.96,.91-.02*fast,travel);
+  if (!action && !keeper && !capturedLocomotion) rig.hips.position.y = THREE.MathUtils.lerp(.96,.91-.02*fast,travel);
   rig.root.updateMatrixWorld(true);
   let plants = rig.footPlants;
   if (!plants || time < plants.time || rig.root.position.distanceTo(plants.position) > 2) { plants = rig.footPlants = { points: [null, null], stance: [false, false], time, position: rig.root.position.clone() }; }
+  if (capturedLocomotion) {
+    capturedFootContacts(rig, speed);
+    plants.time = time; plants.position.copy(rig.root.position);
+    return;
+  }
   for (let i = 0; i < 2; i++) {
     const f = ((cycle + i * .5) % 1 + 1) % 1, stance = THREE.MathUtils.lerp(.42,.26,THREE.MathUtils.clamp(speed/6,0,1));
-    const plant = planting && (action ? i === 0 : f < stance || speed < .15);
+    let plant = planting && (action ? i === 0 : f < stance || speed < .15);
     const foot = rig.bones[i === 0 ? 'footL' : 'footR'];
     if (!planting) { plants.points[i] = null; plants.stance[i] = false; continue; }
     // Keep the kicking leg's authored boot/ball contact.
@@ -275,14 +303,16 @@ export function animateCharacter(
     let z = speed < .15 ? .025 : plant ? reach * (1 - 2 * f / stance) : -reach + 2 * reach * (swing * swing * (3 - 2 * swing));
     let y = .09 + (plant ? 0 : Math.sin(Math.max(0, swing) * Math.PI) * Math.min(.23, .07 + speed * .02) * travel);
     let lateralTarget = 0;
+    const unplantedZ = z, unplantedY = y;
     if (plant) {
       if (!plants.stance[i] || !plants.points[i]) {
         const point = new THREE.Vector3(rig.legs[i].position.x, y, z); rig.root.localToWorld(point); point.y = .09 * rig.root.scale.y; plants.points[i] = point;
       }
       const point = rig.root.worldToLocal(plants.points[i]!.clone()); z = point.z; y = point.y;
       // Release an unreachable anchor rather than hyperextending a knee during a sharp cut.
-      if (Math.abs(z) > .58 || Math.abs(point.x - rig.legs[i].position.x) > .24) { plants.points[i] = null; plants.stance[i] = false; continue; }
-      lateralTarget = point.x - rig.legs[i].position.x;
+      if (Math.abs(z) > .58 || Math.abs(point.x - rig.legs[i].position.x) > .24) {
+        plants.points[i] = null; plant = false; z = unplantedZ; y = unplantedY;
+      } else lateralTarget = point.x - rig.legs[i].position.x;
     } else { plants.points[i] = null; rig.legs[i].rotation.z = 0; }
     plants.stance[i] = plant;
     const dy = y - (rig.hips.position.y - .005), vertical = Math.hypot(dy,lateralTarget);

@@ -1,0 +1,11 @@
+import * as THREE from 'three';
+import {writeFileSync} from 'node:fs';
+import {buildFootballer} from '../src/game/assets/footballer';
+import {buildClips} from '../src/game/animation/clips';
+import {animateCharacter} from '../src/game/character';
+import gaits from '../src/game/assets/cmu-gaits.json';
+const asset=buildFootballer(),bones=asset.bones,root=asset.root;root.scale.set(1.08,.96,1.05);
+const mixer=new THREE.AnimationMixer(root),actions=new Map();const clips=buildClips();for(const gait of gaits.clips){const n=clips.findIndex(c=>c.name===gait.name);clips[n]=THREE.AnimationClip.parse({...gait,uuid:THREE.MathUtils.generateUUID(),blendMode:THREE.NormalAnimationBlendMode});}for(const clip of clips){const action=mixer.clipAction(clip);action.play();action.setEffectiveWeight(0);action.setLoop(THREE.LoopOnce,1);action.clampWhenFinished=true;actions.set(clip.name,action);}
+const rig={root,bones,mixer,actions,motionSource:'captured-locomotion-evaluation',hips:bones.pelvis,head:bones.head,arms:[bones.armL,bones.armR],legs:[bones.legL,bones.legR],knees:[bones.kneeL,bones.kneeR],elbows:[bones.elbowL,bones.elbowR],kit:asset.materials[0]};
+let time=0,stride=0,maxDrift=0,contacts=0,maxLean=0;for(const speed of [0,2,5,8,5,2,0]){let previous=[null,null];for(let n=0;n<180;n++){time+=1/60;stride=(stride+speed/60/(1.1+Math.min(1,speed/8)*1.3))%1;const heading=speed?Math.sin(time*.6)*.7:0;root.rotation.y=heading;root.position.x+=Math.sin(heading)*speed/60;root.position.z+=Math.cos(heading)*speed/60;animateCharacter(rig,time,speed,0,false,null,stride,{receive:0,recovery:0,vx:Math.sin(heading)*speed,vy:Math.cos(heading)*speed,facingX:Math.sin(heading),facingY:Math.cos(heading)});root.updateMatrixWorld(true);maxLean=Math.max(maxLean,Math.abs(bones.spine.rotation.x));for(let i=0;i<2;i++){const foot=bones[i?'footR':'footL'].getWorldPosition(new THREE.Vector3());if(rig.footPlants.stance[i]&&previous[i]){maxDrift=Math.max(maxDrift,foot.distanceTo(previous[i]));contacts++;}previous[i]=rig.footPlants.stance[i]?foot:null;}}}
+const report={maxDrift,contacts,maxLean,source:'captured locomotion; CPU Three.js; nonuniform cosmetic scale; 1260 simulation samples',humanAcceptance:false};writeFileSync('artifacts/v3/stance-regression.json',JSON.stringify(report,null,2));console.log(report);if(maxDrift>.055||contacts<100)process.exitCode=1;

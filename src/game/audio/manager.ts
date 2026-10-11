@@ -1,3 +1,4 @@
+import { approvedVoices } from "./VoiceApproval";
 import {ReactionDirector,type MatchMoment} from '../reactions';
 import {callouts,captions} from '../../content/commentary';
 import {busDefaults,musicPack,musicUrl,radioTracks,sceneGain,type Bus,type MusicScene} from './catalogue';
@@ -9,7 +10,7 @@ export class AudioManager {
  readonly levels={...busDefaults};
  readonly buses={} as Record<Bus,GainNode>;
  effects=true;voices=true;error='';
- voiceStatus='Native commentary awaiting export';private nativeClips:Record<string,{url:string}>={};private nativeReady:Promise<void>;private director=new ReactionDirector();
+ voiceStatus='Voices withheld · recorded Nigerian review required';private nativeClips:Record<string,{url:string}>={};private nativeReady:Promise<void>;private director=new ReactionDirector();
  scene:MusicScene='menu';community=0;
  private wanted=false;private inMatch=false;private active=false;
  private decks:Deck[]=[];private current=0;private track='';private trackIndex=0;
@@ -25,7 +26,7 @@ export class AudioManager {
  get effectsVolume(){return this.levels.sfx;}set effectsVolume(v:number){this.setBus('sfx',v);}
  get voiceVolume(){return this.levels.commentary;}set voiceVolume(v:number){this.setBus('commentary',v);}
  constructor(){
-  this.nativeReady=fetch('/assets/audio/voices/native/manifest.json').then(r=>r.json()).then(manifest=>{this.nativeClips=manifest.clips??{};const count=Object.keys(this.nativeClips).length,total=Object.keys(captions).length;this.voiceStatus=count===total?'Nigerian Pidgin · Spitch':count?`Native commentary · ${count}/${total} clips`:'Native commentary awaiting export';this.onChange();}).catch(()=>{});
+  this.nativeReady=fetch('/assets/audio/voices/native/manifest.json').then(r=>r.json()).then(manifest=>{this.nativeClips=approvedVoices(manifest.clips);const count=Object.keys(this.nativeClips).length,total=Object.keys(captions).length;this.voiceStatus=count===total?'Reviewed Nigerian recordings':count?`Reviewed recordings · ${count}/${total} clips`:'Voices withheld · recorded Nigerian review required';this.onChange();}).catch(()=>{});
   try{const saved=JSON.parse(localStorage.getItem('lagos-audio-buses')||'{}');for(const bus of Object.keys(this.levels) as Bus[])if(typeof saved[bus]==='number')this.levels[bus]=Math.max(0,Math.min(1,saved[bus]));this.effects=localStorage.getItem('lagos-effects')!=='off';this.voices=localStorage.getItem('lagos-voices')!=='off';}catch{}
   document.addEventListener('visibilitychange',()=>{if(document.hidden){this.request++;this.voiceSource?.stop();this.voiceSource=undefined;this.priority=0;void this.context?.suspend();this.decks.forEach(d=>d.element.pause());}else if(this.context){void this.context.resume();if(this.wanted)void this.music?.play().catch(()=>{});}});
  }
@@ -89,7 +90,7 @@ export class AudioManager {
   if(!this.voices||!this.context||(!preview&&!this.inMatch&&!['fulltime','late-winner'].includes(event)))return;
   const priority=['goal','fulltime','late-winner','late-lead','foul','penalty'].includes(event)?3:['kickoff','substitution','save','big-save','near-goal','miss','nutmeg','free-kick','hard-tackle'].includes(event)?2:1,now=this.context.currentTime;
   if(priority<this.priority||(priority===1&&(this.voiceSource||now-this.lastVoice<7)))return;
-  const variants=callouts[event];if(!variants)return;const index=this.director.choose(event,variants.length);
+  const variants=callouts[event];if(!variants?.length)return;const index=this.director.choose(event,variants.length);
   const name=variants[index],request=++this.request;this.priority=priority;this.lastVoice=now;this.lastVoiceEvent=event;
   try{await this.nativeReady;if(request!==this.request)return;this.onCaption(captions[name]);const clip=this.nativeClips[name];if(!clip){this.priority=0;return;}const buffer=await this.load(clip.url);if(request!==this.request||!this.voices||document.hidden)return;this.voiceSource?.stop();const source=this.context.createBufferSource();source.buffer=buffer;
    const bus:Bus=['pass','shot','tackle','skill'].includes(event)?'players':event==='atmosphere'?'crowd':'commentary';source.connect(this.buses[bus]);this.voiceSource=source;this.duckUntil=this.context.currentTime+buffer.duration+.25;

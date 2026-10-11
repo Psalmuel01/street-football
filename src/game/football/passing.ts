@@ -15,7 +15,7 @@ export function passOptions(p:Player,players:Player[],through=false):PassOption[
       }
     }
     const forward=(p.team===0?1:-1)*dx;
-    const score=alignment*12-Math.abs(distance-(through?17:10))*.15+openness*.5+clamp(forward*.08,-1.5,1.5)+(q.vx*(p.team===0?1:-1))*.18-risk*7;
+    const score=alignment*(through?12:16)-Math.abs(distance-(through?17:10))*.15+openness*.5+clamp(forward*.08,-1.5,1.5)+(q.vx*(p.team===0?1:-1))*.18-risk*7;
     return {receiver:q.id,score,alignment,risk,distance};
   }).filter(q=>q.distance>1&&q.distance<gameplay.passing.maxDistance&&q.alignment>gameplay.passing.minAlignment).sort((a,b)=>b.score-a.score);
 }

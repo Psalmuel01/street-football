@@ -1,5 +1,6 @@
 import {type MatchMoment,type MomentKind} from "./reactions";
 import {formations,type Formation} from "../content/formations";
+import {steer,accelerate} from './simulation/Movement';
 import {gameplay} from "./gameplay.config";
 import {passOptions,passDestination} from "./football/passing";
 import {conditions,type Conditions} from "../content/conditions";
@@ -262,15 +263,13 @@ export class Match {
     } else this.passFlight=null;
     this.restartPending=false;
     if(this.setPiece){this.setPiece=null;this.referee=null;this.state="PLAYING";}
-    const d = Math.hypot(kick.tx - p.x, kick.ty - p.y) || 1,
-      dx = (kick.tx - p.x) / d,
-      dy = (kick.ty - p.y) / d;
-    this.ball.x = p.x + dx * 0.64 + dy * 0.1;
-    this.ball.y = p.y + dy * 0.64 - dx * 0.1;
+    const d = Math.hypot(kick.tx - this.ball.x, kick.ty - this.ball.y) || 1,
+      dx = (kick.tx - this.ball.x) / d,
+      dy = (kick.ty - this.ball.y) / d;
+    // Contact changes momentum, never the current ball position.
     this.ball.vx = dx * kick.power;
     this.ball.vy = dy * kick.power;
-    this.ball.vz = kick.lob ? 6 : 0;
-    this.ball.z = kick.lob ? 0.15 : 0;
+    this.ball.vz = kick.lob ? 6 : this.ball.vz;
     this.owner = null;
     this.lastTouch = p.id;
     this.lock = 0.23;
@@ -563,7 +562,7 @@ export class Match {
       }
       if(this.passFlight?.receiver===p.id&&this.owner===null){
         const bx=this.ball.x-p.x,by=this.ball.y-p.y,d=Math.hypot(bx,by);
-        if(d<4&&(bx*this.ball.vx+by*this.ball.vy)<0){const tx=bx+this.ball.vx*.08,ty=by+this.ball.vy*.08,length=Math.hypot(tx,ty)||1;mx=tx/length*Math.min(1,length);my=ty/length*Math.min(1,length);}
+        if(d<6&&(bx*this.ball.vx+by*this.ball.vy)<0){const tx=bx+this.ball.vx*.08,ty=by+this.ball.vy*.08,length=Math.hypot(tx,ty)||1;mx=tx/length*Math.min(1,length);my=ty/length*Math.min(1,length);}
       }
       if(this.training&&p.team===1&&!p.keeper){mx=my=0;sprint=false;}
       if(this.passFlight?.receiver===p.id&&this.passFlight.through)sprint=true;
@@ -580,14 +579,9 @@ export class Match {
         mx /= mag;
         my /= mag;
       }
-      if (mag > 0.12 && !p.action) {
-        const heading=Math.atan2(p.facingY,p.facingX),target=Math.atan2(my,mx),delta=Math.atan2(Math.sin(target-heading),Math.cos(target-heading));
-        const turn=Math.max(-7*dt,Math.min(7*dt,delta));p.facingX=Math.cos(heading+turn);p.facingY=Math.sin(heading+turn);
-        const braking=Math.max(0,Math.cos(delta));
-        // Brake into a cut, then accelerate along the body's new heading.
-        // Moving toward raw input before the body turns caused backward skating.
-        if(this.passFlight?.receiver===p.id){mx*=Math.max(.15,braking);my*=Math.max(.15,braking);}
-        else {mx=p.facingX*Math.min(1,mag)*braking;my=p.facingY*Math.min(1,mag)*braking;}
+      if (!p.action) {
+        const direction = steer(p, mx, my, dt, this.passFlight?.receiver === p.id);
+        mx = direction.x; my = direction.y;
       }
       p.stamina = Math.max(
         0,
@@ -597,10 +591,9 @@ export class Match {
       const speed =
         p.pace * (0.78 + .22*p.stamina) *
         (sprint && p.stamina > 0.05 ? gameplay.movement.sprintMultiplier : 1);
-      const lerp = 1 - Math.exp(-(p.recovery>0?5:planted ? 35 : 14*conditions[this.condition].traction) * dt);
       if(p.action?.kind==='slide'){const progress=p.action.elapsed;const slideSpeed=progress<.48?8*Math.exp(-progress*3):0;p.vx=p.facingX*slideSpeed;p.vy=p.facingY*slideSpeed;}
       else if(planted){p.vx=p.vy=0;}
-      else {p.vx += (mx * speed - p.vx) * lerp;p.vy += (my * speed - p.vy) * lerp;}
+      else {accelerate(p,mx*speed,my*speed,dt,conditions[this.condition].traction*(p.recovery>0?.4:1));}
       p.x = Math.max(-29.5, Math.min(29.5, p.x + p.vx * dt));
       p.y = Math.max(-17.5, Math.min(17.5, p.y + p.vy * dt));
       p.stride = (p.stride + (Math.hypot(p.vx, p.vy) * dt) / (1.1+Math.min(1,Math.hypot(p.vx,p.vy)/8)*1.3)) % 1;
@@ -734,12 +727,10 @@ export class Match {
           }
           if (p.keeper && fromOpponent && speed > 21) {
             // A hard shot is parried back into play, never teleported into possession.
-            this.ball.x = p.x + (p.team === 0 ? 1 : -1) * 1.1;
-            this.ball.y = p.y;
+            // Deflect where contact occurred; retain the swept ball position.
             this.ball.vx = (p.team === 0 ? 1 : -1) * speed * 0.48;
             this.ball.vy = (this.ball.vy || 2) * 0.55;
-            this.ball.z = 0.25;
-            this.ball.vz = 2;
+            this.ball.vz = Math.max(1.2, -this.ball.vz * .45);
             this.lock = 0.3;
             if (!dive)
               this.beginAction(p, "dive", Math.sign(this.ball.vy) || 1);
