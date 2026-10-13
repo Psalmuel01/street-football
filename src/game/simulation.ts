@@ -1,3 +1,4 @@
+import {dribbleTouch,receptionVelocity} from './football/touch';
 import {type MatchMoment,type MomentKind} from "./reactions";
 import {formations,type Formation} from "../content/formations";
 import {steer,accelerate} from './simulation/Movement';
@@ -592,7 +593,7 @@ export class Match {
         p.pace * (0.78 + .22*p.stamina) *
         (sprint && p.stamina > 0.05 ? gameplay.movement.sprintMultiplier : 1);
       if(p.action?.kind==='slide'){const progress=p.action.elapsed;const slideSpeed=progress<.48?8*Math.exp(-progress*3):0;p.vx=p.facingX*slideSpeed;p.vy=p.facingY*slideSpeed;}
-      else if(planted){p.vx=p.vy=0;}
+      else if(planted){accelerate(p,0,0,dt,conditions[this.condition].traction*(p.action?.kind==='pass'?.75:1.3));}
       else {accelerate(p,mx*speed,my*speed,dt,conditions[this.condition].traction*(p.recovery>0?.4:1));}
       p.x = Math.max(-29.5, Math.min(29.5, p.x + p.vx * dt));
       p.y = Math.max(-17.5, Math.min(17.5, p.y + p.vy * dt));
@@ -627,10 +628,8 @@ export class Match {
         if(distance>gameplay.control.turnReleaseDistance && p.receiveTime===0){
           this.owner=null;this.lock=.08;
         }else if(p.touchTime===0 || distance<.3){
-          const reach=gameplay.control.walkReach+Math.min(1,speed/10)*(gameplay.control.sprintReach-gameplay.control.walkReach);
-          const side=Math.sin(p.stride*Math.PI*2)*.12;
+          const {reach,side,interval}=dribbleTouch(speed,p.stride);
           const tx=p.x+p.facingX*reach+p.facingY*side,ty=p.y+p.facingY*reach-p.facingX*side;
-          const interval=gameplay.control.touchInterval;
           this.ball.vx=p.vx+(tx-this.ball.x)/interval;
           this.ball.vy=p.vy+(ty-this.ball.y)/interval;
           p.touchTime=interval;
@@ -743,9 +742,8 @@ export class Match {
             p.touchTime=p.receiveTime;
             if(p.team===0)this.active=p.id;else this.selectDefenderAfterLoss();
             this.passFlight=null;
-            const retention=p.keeper?0:.12+(1-p.passing)*.18;
-            this.ball.vx = this.ball.vx*retention+p.vx*.5;
-            this.ball.vy = this.ball.vy*retention+p.vy*.5;
+            const reception=p.keeper?{vx:0,vy:0}:receptionVelocity(this.ball.vx,this.ball.vy,p.vx,p.vy,p.passing);
+            this.ball.vx=reception.vx;this.ball.vy=reception.vy;
             this.ball.vz = 0;
             p.cooldown = p.keeper ? 0.68 : 0.06;
             if(this.bufferedPass?.player===p.id){

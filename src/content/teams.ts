@@ -38,7 +38,7 @@ export const teams = [
 ];
 export const lines = {
   kickoff: "Oya, play ball!",
-  goal: "Na goal! The area don hear.",
+  goal: "Goal!",
   save: "Keeper! Safe hands.",
   tackle: "Clean tackle. Carry go!",
   fulltime: "Final whistle. Respect the game.",

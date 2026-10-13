@@ -1,3 +1,5 @@
+import {Venues} from './venues';
+import {grounds,type Ground} from '../content/grounds';
 import {Neighbourhood} from "./neighbourhood";
 import {gameplay} from "./gameplay.config";
 import {Atmosphere} from "./atmosphere";
@@ -13,6 +15,10 @@ import {
 } from "./character";
 import { StreetLife } from "./street-life";
 export class PitchRenderer {
+  streetEnvironment=new THREE.Group();
+  private surfaceTextures=new Map<Ground,THREE.Texture>();
+  ground:Ground='surulere';
+  venues:Venues;
   street: StreetLife;
   atmosphere:Atmosphere;
   sun:THREE.DirectionalLight;
@@ -84,7 +90,7 @@ export class PitchRenderer {
     const court = this.box(0, 0.06, 0, 59.5, 0.05, 35.5, "#ffffff");
     this.courtMaterial=court.material as THREE.MeshStandardMaterial;
     this.courtMaterial.map=this.concreteTexture();this.courtMaterial.color.set('#b2c3c3');
-    this.courtMaterial.bumpMap=this.courtMaterial.map;this.courtMaterial.bumpScale=.015;
+    this.courtMaterial.bumpMap=this.courtMaterial.map;this.courtMaterial.bumpScale=.015;this.surfaceTextures.set('surulere',this.courtMaterial.map);
     const line = "#d1d8b8";
     for (const z of [-17.4, 17.4])
       this.box(0, 0.105, z, 58.8, 0.035, 0.11, line);
@@ -117,6 +123,7 @@ export class PitchRenderer {
         this.box(0, y, z, 64, 0.025, 0.025, "#858c74");
     }
     for (const x of [-33, 33]) this.box(x, 0.55, 0, 0.35, 1.1, 40, "#d2b080");
+    const streetStart=new Set(this.scene.children);
     const buildingColors = [
       "#d59b6a",
       "#78aca8",
@@ -234,7 +241,10 @@ export class PitchRenderer {
     );
     this.neighbourhood=new Neighbourhood(this.scene);
     this.street = new StreetLife(this.scene);
+    for(const child of [...this.scene.children])if(!streetStart.has(child))this.streetEnvironment.add(child);
+    this.scene.add(this.streetEnvironment);
     this.atmosphere=new Atmosphere(this.scene);
+    this.venues=new Venues(this.scene);
     for (let i = 0; i < 40; i++) {
       const x = -31 + ((i * 9.13) % 62),
         z = i % 2 ? -21.2 : 21.3;
@@ -248,6 +258,7 @@ export class PitchRenderer {
       if(i%10===0){g.position.set([-25,-6,17,29][i/10],0,-21.8);g.rotation.y=0;}
       this.spectators.push(rig);this.scene.add(g);
     }
+    const palmsStart=new Set(this.scene.children);
     for (const x of [-37,37]) {
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.17,.32,10,9),new THREE.MeshStandardMaterial({color:'#77634a',roughness:1}));
       trunk.position.set(x,5,9);trunk.castShadow=true;this.scene.add(trunk);
@@ -262,6 +273,7 @@ export class PitchRenderer {
         const leaf=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:i%2?'#596e40':'#72874b',side:THREE.DoubleSide,roughness:1}));leaf.castShadow=true;this.scene.add(leaf);
       }
     }
+    for(const child of [...this.scene.children])if(!palmsStart.has(child))this.streetEnvironment.add(child);
     for (let i = 0; i < 10; i++) {
       const rig = createCharacter(
         i % 5 === 0 ? "#d66b49" : colors[i < 5 ? 0 : 1],
@@ -304,12 +316,28 @@ export class PitchRenderer {
     this.spectators.forEach((rig,i)=>{rig.root.visible=quality==='high'||i%(quality==='low'?2:4)!==0;});
     this.resize();
   }
+  setGround(ground:Ground){
+    this.ground=ground;this.venues.set(ground);this.streetEnvironment.visible=ground==='surulere';this.atmosphere.decor.visible=ground==='surulere';this.courtMaterial.color.set(grounds[ground].colour);
+    this.courtMaterial.map=this.surfaceTexture(ground);this.courtMaterial.bumpMap=this.courtMaterial.map;this.courtMaterial.needsUpdate=true;
+    const label=document.querySelector('.scene-label span'),title=document.querySelector('.scene-label h2');
+    if(label)label.textContent=grounds[ground].tag;if(title)title.textContent=grounds[ground].name;
+    const surface=document.querySelector('.court-bottom>span');if(surface)surface.textContent=`5 VS 5 / ${ground==='arena'?'ALL-WEATHER':'CONCRETE'} / NO OFFSIDE`;
+  }
+  private surfaceTexture(ground:Ground){
+    const cached=this.surfaceTextures.get(ground);if(cached)return cached;
+    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const ctx=canvas.getContext('2d')!;
+    ctx.fillStyle='#dbdfda';ctx.fillRect(0,0,512,256);
+    if(ground==='arena')for(let i=0;i<8;i++){ctx.fillStyle=i%2?'#cbd8c5':'#edf0df';ctx.fillRect(i*64,0,64,256);}
+    for(let i=0;i<5000;i++){const x=(i*73.17)%512,y=(i*47.31)%256;ctx.fillStyle=i%2?'#ffffff15':'#273d2913';ctx.fillRect(x,y,ground==='arena'?1:2,ground==='arena'?3:1);}
+    if(ground==='marina'){ctx.strokeStyle='#4c637322';for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(i*120,0);ctx.lineTo(i*120+20,256);ctx.stroke();}}
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=this.renderer.capabilities.getMaxAnisotropy();this.surfaceTextures.set(ground,texture);return texture;
+  }
   setConditions(condition:Conditions){
     this.scene.background=condition==='golden'?this.sunset:new THREE.Color(condition==='night'?'#172c39':'#95adae');this.wet=condition==='rain';this.atmosphere.set(condition);const night=condition==='night',rain=condition==='rain';
     this.sun.intensity=night?.18:rain?1.4:3.8;this.hemi.intensity=night?.8:rain?1.2:1.15;this.fill.intensity=night?.8:1.15;
     const sky=night?'#172c39':rain?'#95adae':'#d99d64';this.renderer.setClearColor(sky);(this.scene.fog as THREE.Fog).color.set(sky);
-    this.courtMaterial.roughness=rain?.58:.95;this.courtMaterial.metalness=0;this.courtMaterial.color.set(rain?'#869a91':'#b2c3c3');
-    const label=document.querySelector('.court-top>span');if(label)label.textContent=`SURULERE / LAGOS · ${night?'UNDER THE LIGHTS':rain?'AFTER THE RAIN':'GOLDEN HOUR'}`;
+    this.courtMaterial.roughness=rain?.58:.95;this.courtMaterial.metalness=0;this.courtMaterial.color.set(grounds[this.ground].colour);if(rain)this.courtMaterial.color.multiplyScalar(.78);
+    const label=document.querySelector('.court-top>span');if(label)label.textContent=`${grounds[this.ground].name.toUpperCase()} · ${night?'UNDER THE LIGHTS':rain?'AFTER THE RAIN':'GOLDEN HOUR'}`;
   }
   setPlayerAppearance(id:number,color:string,identity:number,number:number){
     this.scene.remove(this.players[id]);

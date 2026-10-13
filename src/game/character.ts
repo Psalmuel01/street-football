@@ -272,6 +272,10 @@ export function animateCharacter(
       rig.bones.spine.rotation.z -= THREE.MathUtils.clamp(lateral * .045, -.23, .23);
       rig.bones.spine.rotation.x += THREE.MathUtils.clamp(forward * .009, -.10, .08);
     }
+    if(rig.motionSource !== 'procedural-prototype'){
+      rig.bones.spine.rotation.z -= THREE.MathUtils.clamp(Math.sin(travelAngle)*speed*.016,-.12,.12);
+      if(braking)rig.bones.spine.rotation.x -= .04*Math.min(1,speed/5);
+    }
     if (motion.recovery > 0) { rig.bones.spine.rotation.x += .08 * Math.min(1,motion.recovery/.3); rig.arms[0].rotation.z -= .35; rig.arms[1].rotation.z += .35; }
     if (motion.receive > 0) { const weight = Math.min(1,motion.receive / .18); rig.legs[1].rotation.x -= .35 * weight; rig.legs[1].rotation.y += .3 * weight; rig.knees[1].rotation.x += .35 * weight; rig.arms[0].rotation.z -= .2 * weight; }
   }

@@ -1,3 +1,5 @@
+import {grounds,type Ground} from './content/grounds';
+import {emptyCup,readCup,recordCup,points,cupOpponent,newSeason} from './game/cup';
 import {setupLagosLife} from './platform/lagos-life';
 import {pauseMarkup} from './ui/pause';
 import {setupInstall} from './ui/install';
@@ -12,7 +14,7 @@ import { Router } from "./ui/router";
 import { squadMarkup } from "./ui/squad";
 import { makeRoster, type Tactic } from "./content/roster";
 import { GoalReplay } from "./game/replay";
-import { teams, lines } from "./content/teams";
+import { teams } from "./content/teams";
 import { Match, idle } from "./game/simulation";
 import { InputManager } from "./game/input";
 import { PitchRenderer } from "./game/renderer";
@@ -31,6 +33,12 @@ async function boot() {
   app.setAttribute("aria-busy", "true");
   await prepareCharacterAsset();
   let match = new Match();
+  let cup=emptyCup();try{cup=readCup(localStorage.getItem('lagos-area-cup'));}catch{}
+  let cupRecorded=false;
+  const saveCup=()=>{try{localStorage.setItem('lagos-area-cup',JSON.stringify(cup));}catch{}};
+  const cupPanel=document.createElement('section');cupPanel.className='cup-panel';document.querySelector('.mode-tabs')!.after(cupPanel);
+  const renderCup=()=>{cupPanel.hidden=mode!=='cup';cupPanel.innerHTML=`<span class="eyebrow">AREA CUP · SAVED ON THIS DEVICE</span><h3>${cup.results.length===3?'Season complete':`Match ${cup.results.length+1} of 3`}</h3><p>${teams[cup.team].name} · ${points(cup)} points · ${cup.titles} titles</p><p>Play every neighbourhood. Earn 7 points to lift the cup. Best season: ${cup.bestPoints}/9.</p><div class="cup-fixtures">${[0,1,2].map((n)=>`<span>${teams[(cup.team+n+1)%4].short}<b>${cup.results[n]?`${cup.results[n].goals} : ${cup.results[n].conceded}`:'—'}</b></span>`).join('')}</div><button id="new-season" class="secondary">${cup.results.length?'Start a new season':'Use selected team'}</button>`;cupPanel.querySelector<HTMLButtonElement>('#new-season')!.onclick=()=>{cup=newSeason(cup,chosen);saveCup();renderCup();};};
+  renderCup();
   const replay=new GoalReplay();
   const debug=import.meta.env.DEV?(await import("./game/debug")).installFootballDebug(()=>match):null;
   const startingFives=teams.map(()=>[0,1,2,3,4]);
@@ -108,22 +116,31 @@ async function boot() {
   renderer.setQuality(graphics.value||'auto');
   graphics.onchange=()=>{renderer.setQuality(graphics.value);try{localStorage.setItem('lagos-quality',graphics.value);}catch{}};
   const audio=new AudioManager();
+  $('#graphics-quality').insertAdjacentHTML('afterend','<div class="control-customisation"><label for="touch-size">Touch button size <input id="touch-size" type="range" min="85" max="120" value="100"></label><p>Adjust the controls to your hands. Completed cup matches save on this device.</p></div>');
+  const touchSize=$<HTMLInputElement>('#touch-size');
+  try{const size=Number(localStorage.getItem('lagos-touch-size'));if(size>=85&&size<=120)touchSize.value=String(size);}catch{}
+  const applyTouchSize=()=>document.documentElement.style.setProperty('--control-scale',String(Number(touchSize.value)/100));applyTouchSize();
+  touchSize.oninput=()=>{applyTouchSize();try{localStorage.setItem('lagos-touch-size',touchSize.value);}catch{}};
+
   const startAudio=(event:PointerEvent)=>{if((event.target as HTMLElement).closest('#sound,#music-toggle,input,select'))return;document.removeEventListener('pointerdown',startAudio);void audio.firstInteraction();};
   document.addEventListener('pointerdown',startAudio);
   const busNames:Record<Bus,string>={master:'Master',music:'Music',commentary:'Commentary',players:'Player voices',crowd:'Crowd',environment:'Environment',sfx:'Sound effects',ui:'Menu sounds'};
-  $('#mixer-controls').innerHTML=Object.entries(busNames).map(([key,label])=>`<label>${label}<input type="range" min="0" max="100" data-audio-bus="${key}" value="${Math.round(audio.levels[key as Bus]*100)}" aria-label="${label} volume"></label>`).join('');
+  $('#mixer-controls').innerHTML=Object.entries(busNames).filter(([key])=>!['commentary','players'].includes(key)).map(([key,label])=>`<label>${label}<input type="range" min="0" max="100" data-audio-bus="${key}" value="${Math.round(audio.levels[key as Bus]*100)}" aria-label="${label} volume"></label>`).join('');
   document.querySelectorAll<HTMLInputElement>('[data-audio-bus]').forEach(slider=>slider.oninput=()=>audio.setBus(slider.dataset.audioBus as Bus,Number(slider.value)/100));
   let lastMoment=0;
-  $('#test-callout').insertAdjacentHTML('afterend','<p id="native-voice-status" role="status"></p>');
-  let captionUntil=0;
-  audio.onCaption=text=>{$('#commentary-caption').textContent=text;captionUntil=performance.now()+3500;};
-  $('#voices-toggle').onchange=e=>audio.setVoices((e.target as HTMLInputElement).checked);
-  $('#voice-volume').oninput=e=>audio.voiceVolume=Number((e.target as HTMLInputElement).value)/100;
   $('#effects-volume').oninput=e=>{audio.effectsVolume=Number((e.target as HTMLInputElement).value)/100;audio.setEffects(audio.effects);};
   $('#test-callout').onclick=()=>{void audio.previewCallout();};
+  $('label[for="conditions"]').insertAdjacentHTML('beforebegin',`<label for="ground">YOUR GROUND</label><select id="ground">${Object.entries(grounds).map(([id,g])=>`<option value="${id}">${g.name}</option>`).join('')}</select><p id="ground-description">${grounds.surulere.description}</p>`);
+  $<HTMLSelectElement>('#ground').onchange=e=>{const id=(e.target as HTMLSelectElement).value as Ground;renderer.setGround(id);audio.setGround(id);renderer.setConditions($<HTMLSelectElement>('#conditions').value as Conditions);$('#ground-description').textContent=grounds[id].description;};
   $<HTMLSelectElement>('#conditions').onchange=e=>{const value=(e.target as HTMLSelectElement).value as Conditions;renderer.setConditions(value);$('#conditions-description').textContent=conditions[value].description;};
+  const setupSelectors=['ground','conditions','duration','difficulty'];
+  try{const saved=JSON.parse(localStorage.getItem('lagos-match-setup')||'{}');for(const id of setupSelectors){const element=$<HTMLSelectElement>(`#${id}`);if(Array.from(element.options).some(option=>option.value===saved[id]))element.value=saved[id];}}catch{}
+  renderer.setGround($<HTMLSelectElement>('#ground').value as Ground);audio.setGround($<HTMLSelectElement>('#ground').value as Ground);renderer.setConditions($<HTMLSelectElement>('#conditions').value as Conditions);
+  $('#ground-description').textContent=grounds[$<HTMLSelectElement>('#ground').value as Ground].description;
+  $('#conditions-description').textContent=conditions[$<HTMLSelectElement>('#conditions').value as Conditions].description;
+  for(const id of setupSelectors)$(`#${id}`).addEventListener('change',()=>{try{localStorage.setItem('lagos-match-setup',JSON.stringify(Object.fromEntries(setupSelectors.map(key=>[key,$<HTMLSelectElement>(`#${key}`).value]))));}catch{}});
   audio.onChange=()=>{
-    $('#native-voice-status').textContent=audio.voiceStatus;
+
     $('#sound').textContent=audio.playing?'♫ MUSIC ON':'♫ MUSIC OFF';
     $('#sound').setAttribute('aria-pressed',String(audio.playing));
     $('#sound').setAttribute('aria-label',audio.playing?'Pause music':'Play Afrobeats music');
@@ -131,7 +148,7 @@ async function boot() {
     $('#music-toggle').setAttribute('aria-pressed',String(audio.playing));
     $('#music-toggle').setAttribute('aria-label',audio.playing?'Pause music':'Play music');
     $('.music-dock').classList.toggle('playing',audio.playing);
-    $<HTMLInputElement>('#voices-toggle').checked=audio.voices;
+
     $('.music-copy strong').textContent=audio.title;
     $('.music-settings>span').textContent='STREET RADIO';
     $('#music-status').textContent=audio.error||(audio.playing?`Playing · ${audio.title}`:'Afrobeats · FASSounds');
@@ -190,7 +207,7 @@ async function boot() {
   document.querySelectorAll<HTMLElement>("[data-mode]").forEach(
     (el) =>
       (el.onclick = () => {
-        mode = el.dataset.mode!;
+        mode = el.dataset.mode!;renderCup();$<HTMLSelectElement>('#opponent').disabled=mode==='cup';
         document
           .querySelectorAll("[data-mode]")
           .forEach((e) => {e.classList.toggle("selected", e === el);e.setAttribute("aria-pressed",String(e===el));});
@@ -201,9 +218,11 @@ async function boot() {
       }),
   );
   function start() {
+    if(mode==="cup"){if(cup.results.length===3)cup=newSeason(cup,cup.team);chosen=cup.team;refreshTeams();saveCup();renderCup();}
+    cupRecorded=false;
     playingTeam = chosen;
     void audio.unlock();audio.setMatchActive(true);
-    const opponent = Number($<HTMLSelectElement>("#opponent").value);
+    const opponent = mode==="cup"?cupOpponent(cup):Number($<HTMLSelectElement>("#opponent").value);
     playingOpponent=opponent;
     replay.clear();replayGoalSerial='';lastMoment=0;
     match = new Match(
@@ -213,6 +232,7 @@ async function boot() {
       Number($<HTMLSelectElement>("#difficulty").value),
     );
     match.condition=$<HTMLSelectElement>('#conditions').value as Conditions;
+    renderer.setGround($<HTMLSelectElement>('#ground').value as Ground);audio.setGround($<HTMLSelectElement>('#ground').value as Ground);
     renderer.setConditions(match.condition);
     match.configure(0,makeRoster(chosen),startingFives[chosen],gamePlans[chosen]);
     match.configure(1,makeRoster(opponent),[0,1,2,3,4]);
@@ -324,7 +344,9 @@ async function boot() {
     if (match.state === "FULL_TIME") {
       const total = match.possession[0] + match.possession[1];
       overlay.innerHTML = `<p class="eyebrow">FULL TIME · RESPECT THE GAME</p><h2>${match.score[0]} — ${match.score[1]}</h2><p>${match.score[0] === match.score[1] ? "Honours shared. Run it back?" : match.score[0] > match.score[1] ? "Your area takes the bragging rights." : "Another game. Another chance."}</p><div class="result-stats">${match.shots[0]}–${match.shots[1]} shots · ${match.passes[0]}–${match.passes[1]} passes · ${match.saves[0]}–${match.saves[1]} saves<br>${total ? Math.round((match.possession[0] / total) * 100) : 50}% possession</div><button class="primary" id="rematch">RUN IT BACK ↗</button>`;
+      if(mode==='cup'&&!cupRecorded){cup=recordCup(cup,match.score[0],match.score[1]);cupRecorded=true;saveCup();renderCup();}
       $('#results-page').innerHTML=resultsMarkup(match,playingTeam,playingOpponent);
+      if(mode==='cup'){$('#result-rematch').textContent=cup.results.length===3?'START NEXT SEASON':'NEXT CUP MATCH';$('#result-rematch').insertAdjacentHTML('beforebegin',`<p class="cup-result">AREA CUP · ${points(cup)} POINTS · ${cup.results.length}/3 MATCHES${cup.results.length===3?(points(cup)>=7?' · CHAMPIONS':' · SEASON COMPLETE'):''}</p>`);}
       $('#result-rematch').onclick=start;
       $("#rematch").onclick = start;
       router.go('results');
@@ -390,8 +412,8 @@ async function boot() {
       accumulator -= 1 / 60;
     }
     if(running&&router.page==='match'&&match.state!=='PAUSED')audio.setScene(replay.showing?'replay':match.state==='PLAYING'&&!match.restartPending?'gameplay':match.state==='GOAL'?'replay':'intro');
+    audio.setMatchPaused(match.state==='PAUSED');
     audio.update(dt,running&&match.state==='PLAYING'&&!replay.active,Math.hypot(match.players[match.active].vx,match.players[match.active].vy),match.condition==='rain',renderer.cameraTarget.x,renderer.cameraTarget.z);
-    $('#commentary-caption').hidden=now>captionUntil||router.page!=='match';
     replay.advance(dt,match.state==='PAUSED'||document.hidden);
     renderer.showDecision(replay.showing?null:match.referee,match.state==='PAUSED');
     const replayFrame=replay.sample();
@@ -431,14 +453,14 @@ async function boot() {
         !replay.showing && (match.state === "KICKOFF" || match.state === "GOAL" || match.state === "FOUL" || match.state === "FREE_KICK" || match.restartPending)
       );
       announcement.textContent =
-        match.state === "FOUL" ? `FOUL · ${match.referee?.team===0?'YOUR BALL':'OPPOSITION BALL'}` : match.state==='FREE_KICK' ? `${match.setPiece?.penalty?'PENALTY':'FREE KICK'} · ${match.setPiece?.team===0?'✕ PASS / □ SHOOT':'OPPOSITION'}` : match.state === "GOAL" ? "NA GOAL!" : match.kickoffTeam===0?"YOUR KICK-OFF · PRESS ✕":"OPPOSITION KICK-OFF";
+        match.state === "FOUL" ? `FOUL · ${match.referee?.team===0?'YOUR BALL':'OPPOSITION BALL'}` : match.state==='FREE_KICK' ? `${match.setPiece?.penalty?'PENALTY':'FREE KICK'} · ${match.setPiece?.team===0?'✕ PASS / □ SHOOT':'OPPOSITION'}` : match.state === "GOAL" ? "GOAL!" : match.kickoffTeam===0?"YOUR KICK-OFF · PRESS ✕":"OPPOSITION KICK-OFF";
       const moments=match.moments.filter(moment=>moment.id>lastMoment);
       if(moments.length){
         lastMoment=moments.at(-1)!.id;
-        // Deliver all visual reactions; prefer the more specific spoken call within a frame.
+        // Deliver all visual reactions and one crowd response for this moment.
         const priority=(kind:string)=>['late-winner','late-lead','penalty','foul','big-save','nutmeg'].includes(kind)?4:['goal','fulltime','near-goal','miss'].includes(kind)?3:2;
         moments.forEach(moment=>renderer.react(moment.kind,moment.intensity));
-        const spoken=moments.reduce((best,m)=>priority(m.kind)>priority(best.kind)?m:best);audio.react(spoken);
+        const reaction=moments.reduce((best,m)=>priority(m.kind)>priority(best.kind)?m:best);audio.react(reaction);
       }
       if (lastEvent !== match.eventSerial) {
         lastEvent = match.eventSerial;
@@ -446,7 +468,7 @@ async function boot() {
         if (match.state === "FULL_TIME") updateOverlay();
         $("#court").setAttribute(
           "aria-label",
-          lines[match.event as keyof typeof lines] ?? "Match playing",
+          `Football pitch · ${match.state==="FULL_TIME"?"Full time":"Match in progress"}`,
         );
       }
     }

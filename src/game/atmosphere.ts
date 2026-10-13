@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type {Conditions} from '../content/conditions';
 export class Atmosphere {
+  decor=new THREE.Group();
   lamps:THREE.SpotLight[]=[];
   bulbs:THREE.Mesh[]=[];
   rain:THREE.LineSegments;
@@ -13,6 +14,7 @@ export class Atmosphere {
     }
     const points=[];for(let i=0;i<240;i++){const x=((i*19.37)%64)-32,y=(i*3.17)%16,z=((i*13.13)%42)-21;points.push(x,y,z,x-.13,y-.55,z);}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(points,3));this.rain=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:'#cbdfdf',transparent:true,opacity:.26}));this.rain.visible=false;scene.add(this.rain);
+    const decorStart=new Set(scene.children);
     // Painted, original neighbourhood mural panels along the boundary.
     for(const z of [-19.59,19.59]){
       const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=128;const c=canvas.getContext('2d')!;
@@ -28,6 +30,7 @@ export class Atmosphere {
       const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute([x,y,-22,x+.8,y,-22,x+.4,y-.75,-22],3));geometry.computeVertexNormals();
       scene.add(new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:['#ebba4c','#4ba6a1','#d27760','#ccc39d'][i%4],side:THREE.DoubleSide,roughness:.9})));
     }
+    for(const child of [...scene.children])if(!decorStart.has(child))this.decor.add(child);scene.add(this.decor);
   }
   set(condition:Conditions){this.condition=condition;this.rain.visible=condition==='rain';this.lamps.forEach(l=>l.intensity=condition==='night'?110:condition==='rain'?18:0);this.bulbs.forEach(b=>(b.material as THREE.MeshStandardMaterial).emissiveIntensity=condition==='night'?5:.2);}
   update(dt:number,paused:boolean){if(paused||this.condition!=='rain')return;this.time+=dt;const p=this.rain.geometry.attributes.position;for(let i=0;i<p.count;i+=2){let y=p.getY(i)-dt*12;if(y<0)y=16;p.setY(i,y);p.setY(i+1,y-.55);}p.needsUpdate=true;}
