@@ -345,7 +345,7 @@ async function boot() {
       const total = match.possession[0] + match.possession[1];
       overlay.innerHTML = `<p class="eyebrow">FULL TIME · RESPECT THE GAME</p><h2>${match.score[0]} — ${match.score[1]}</h2><p>${match.score[0] === match.score[1] ? "Honours shared. Run it back?" : match.score[0] > match.score[1] ? "Your area takes the bragging rights." : "Another game. Another chance."}</p><div class="result-stats">${match.shots[0]}–${match.shots[1]} shots · ${match.passes[0]}–${match.passes[1]} passes · ${match.saves[0]}–${match.saves[1]} saves<br>${total ? Math.round((match.possession[0] / total) * 100) : 50}% possession</div><button class="primary" id="rematch">RUN IT BACK ↗</button>`;
       if(mode==='cup'&&!cupRecorded){cup=recordCup(cup,match.score[0],match.score[1]);cupRecorded=true;saveCup();renderCup();}
-      $('#results-page').innerHTML=resultsMarkup(match,playingTeam,playingOpponent);
+      $('#results-page').innerHTML=resultsMarkup(match,playingTeam,playingOpponent,renderer.ground);
       if(mode==='cup'){$('#result-rematch').textContent=cup.results.length===3?'START NEXT SEASON':'NEXT CUP MATCH';$('#result-rematch').insertAdjacentHTML('beforebegin',`<p class="cup-result">AREA CUP · ${points(cup)} POINTS · ${cup.results.length}/3 MATCHES${cup.results.length===3?(points(cup)>=7?' · CHAMPIONS':' · SEASON COMPLETE'):''}</p>`);}
       $('#result-rematch').onclick=start;
       $("#rematch").onclick = start;

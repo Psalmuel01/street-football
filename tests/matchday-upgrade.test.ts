@@ -34,3 +34,16 @@ test('crowd recordings cannot start after a host pause and spoken commentary is 
   audio.setHostPaused(true);decode!({duration:1.6});await new Promise(resolve=>setTimeout(resolve,0));assert.equal(started,0);
  }finally{globalThis.fetch=priorFetch;if(priorDocument)Object.defineProperty(globalThis,'document',priorDocument);else Reflect.deleteProperty(globalThis,'document');if(priorStorage)Object.defineProperty(globalThis,'localStorage',priorStorage);else Reflect.deleteProperty(globalThis,'localStorage');}
 });
+
+test('each venue owns a different environment and switching displays exactly one',async()=>{
+ const prior=Object.getOwnPropertyDescriptor(globalThis,'document');
+ const context={fillRect(){},fillText(){},fillStyle:'',textAlign:'',font:''};
+ Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement(){return {width:0,height:0,getContext(){return context;}};}}});
+ try{
+  const {Scene,InstancedMesh}=await import('three');const {Venues}=await import('../src/game/venues');const venues=new Venues(new Scene());
+  assert.equal(venues.root.children.length,3);const [yard,waterfront,arena]=venues.root.children;
+  assert.ok(waterfront.children.length>yard.children.length*10);assert.ok(arena.children.some(child=>child instanceof InstancedMesh));
+  venues.set('marina');assert.deepEqual(venues.root.children.map(g=>g.visible),[false,true,false]);
+  venues.set('arena');assert.deepEqual(venues.root.children.map(g=>g.visible),[false,false,true]);
+ }finally{if(prior)Object.defineProperty(globalThis,'document',prior);else Reflect.deleteProperty(globalThis,'document');}
+});
