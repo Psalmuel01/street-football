@@ -23,7 +23,7 @@ Set server variables only:
 - `VATAR_MODE=test`
 - `VATAR_SECRET` from the same draft's locally saved, ignored `.env.lagos-life`
 - `DATABASE_URL` for a durable PostgreSQL database (or QuikDB-injected `QUIKDB_CLOUD_DB_URL`)
-- `PUBLIC_ORIGIN=https://street-football.quikdb.net`
+- `PUBLIC_ORIGIN=https://street-football-api.quikdb.net`
 - `PORT=5173`
 
 No webhook/results secret is needed for this single-player product. No `VITE_` secrets. Never commit credential files or connection strings.
@@ -36,12 +36,16 @@ QuikDB's live Databases page currently says “Creation coming soon” and offer
 
 71 tests pass, including forged/unpaid/mismatched receipts, ownership binding, retry after failed delivery, and refunds. An isolated real PostgreSQL check verifies concurrent idempotency, player binding, mode isolation, persistence across reconnect and revocation. The browser shop check also passes: mock purchase, one claim, owned colour selector, restore retaining the selection, Court Gold applied in a match, and no browser errors. These checks are not real platform payment approval.
 
-Before review: provision the database, store the test key in the approved host, configure Node.js, deploy, run a real sandbox purchase, confirm server verification and delivery, test reload/restore, update the listing for the optional cosmetic, and submit. Live keys are issued only after platform approval; do not substitute them into a test deployment.
+Database provisioning, secret storage, deployment, real sandbox purchase, server verification, delivery, reload/restore, and listing updates are complete. Final review submission remains. Live keys are issued only after platform approval; do not substitute them into a test deployment.
 
-## Routed backend deployment
+## Current hosted integration — 13 October 2026
 
-The existing QuikDB static deployment cannot switch runtime through the current Settings UI or supported CLI config patch. Prepare a separate Node.js deployment from the same repository/main branch as `street-football-api`, then add an Application Route on the existing game deployment: public path `/api`, target the API deployment, target path `/api`. This keeps https://street-football.quikdb.net/ as the registered game URL.
+Both QuikDB deployments now run commit f0451ca. The original static deployment is available at https://street-football.quikdb.net/. The approved Node.js deployment is deploy-a8ef93c4-55eb-4dca-98ae-eb6400cea23a at https://street-football-api.quikdb.net/ and serves both the game and purchase API.
 
-The static game continues using nginx, port 5173, install `npm ci`, build `npm run build`, start `nginx -g "daemon off;"`, health `/`. The API uses Node.js, install `npm ci`, build `npm run build`, start `npm start`, port 5173, health `/health`. Both must deploy the purchase-feature commit (14bb4cd or newer). The API needs the five server variables listed above, including the same game id and test key. Its PUBLIC_ORIGIN remains the game URL, not the API hostname.
+QuikDB's Application Routes selector omitted the new deployment even after refreshing, so no route was saved. The Samuel Dahunsi Lagos Life draft now loads the combined Node service directly. Its PUBLIC_ORIGIN matches that address; the saved environment update was applied successfully. The original static game remains available.
 
-On 13 October 2026, DATABASE_URL was confirmed saved as a secret on the existing game deployment. A Node.js configuration was detected and prepared in the QuikDB creation wizard with the default suggested 256 MB RAM / 0.25 vCPU. Credential access for this separate service awaits explicit approval. The static frontend's latest auto-deploy failed with “Application image could not be saved”; the previously working frontend remains live. A manual retry using the corrected single-install build command has been requested.
+The user entered the Neon DATABASE_URL directly as a secret on the Node service. VATAR_SECRET is encrypted there. An environment export was rejected by automatic approval review because it could download multiple secrets; no export occurred and direct entry was used instead.
+
+A real Lagos Life sandbox checkout for night_court_kits completed with Pay (test), with no money transferred. All mandatory platform checks are now green: SDK initialization, test purchase, server verification, and delivery. The game unlocked the three colours. Reload and explicit Restore purchases both recovered ownership from PostgreSQL, and Court Gold could be selected again. Colour selection itself is currently per game load. Screenshots are saved locally under ignored artifacts/lagos-life/real-purchase-restored.png and review-ready.png.
+
+The listing has an icon, three screenshots and the optional cosmetic description. Final review submission awaits action-time agreement confirmation. Live payment remains unavailable until platform approval and live-key configuration.
