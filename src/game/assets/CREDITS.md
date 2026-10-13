@@ -18,3 +18,7 @@ Walking (subject 35, trial 01, frames 80–205) and running (subject 09, trial 0
 - Source terms permit inclusion in commercially sold products, but prohibit direct resale of motion data even in converted form. Original source/terms are retained under `tools/motion-review/cmu-source/` for audit. Do not market or sell those raw files or this conversion as an animation asset pack.
 - Required acknowledgment: The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.
 - Conversion: `scripts/retarget-cmu-v3.mjs`; output: `cmu-gaits.json`. No Konami/PES/eFootball assets are used.
+
+## Football transition overlays and expanded clubs
+
+Cut-left, cut-right, stop and receive poses in `animation/clips.ts` are original procedural animation authored for this game. They blend with the credited captured gait; they are not new football motion-capture recordings. Eight kit patterns and club crests are original code/vector designs. New club portraits (teams 4–7) were rendered from the game's existing character asset and material system via `tools/portrait-preview.html`; they are production art assets, not test screenshots. Existing character source and motion credits above continue to apply.

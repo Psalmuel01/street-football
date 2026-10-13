@@ -318,6 +318,7 @@ export function buildFootballer(detail=true): FootballerAsset {
     for (let lace = 0; lace < 3; lace++)
       ellipsoid(x, 0.108, 0.08 + lace * 0.022, 0.044, 0.004, 0.004, 3, foot);
   }
+  if(detail){
   // Authored MakeHuman CC0 topology replaces the primitive face and ears.
   const headBase=positions.length/3,headStart=indices.length;
   for(let i=0;i<humanHead.positions.length;i+=3){
@@ -342,6 +343,11 @@ export function buildFootballer(detail=true): FootballerAsset {
     }
   }
   geometry.addGroup(scalpStart,indices.length-scalpStart,5);
+  }else{
+    // Distant spectators do not need the full facial topology or separate eye meshes.
+    ellipsoid(0,1.79,.012,.081,.112,.083,1,'head');
+    ellipsoid(0,1.87,0,.082,.045,.084,5,'head');
+  }
   // Collar trim, shirt seams and boot detailing are modeled and survive offline export.
   loft(
     [

@@ -2,6 +2,7 @@ import { idle, type Input } from "./simulation";
 export class InputManager {
   keys = new Set<string>();
   pressed = new Set<string>();
+  private shiftHeld = false;
   touch = idle();
   heldTouch = new Set<string>();
   lastButtons: boolean[] = [];
@@ -23,12 +24,18 @@ export class InputManager {
         )
       )
         e.preventDefault();
+      this.shiftHeld = e.shiftKey || e.key === "Shift";
       if (!this.keys.has(e.code)) this.pressed.add(e.code);
       this.keys.add(e.code);
       if (e.code === "Escape" && !e.repeat) pause();
     });
-    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+    window.addEventListener("keyup", (e) => {
+      this.keys.delete(e.code);
+      this.shiftHeld = e.key === "Shift" ? false : e.shiftKey;
+      if (!this.shiftHeld) {this.keys.delete("ShiftLeft");this.keys.delete("ShiftRight");}
+    });
     window.addEventListener("blur", () => {
+      this.shiftHeld = false;
       this.keys.clear();
       this.pressed.clear();
       this.touch = idle();
@@ -45,7 +52,7 @@ export class InputManager {
       y:
         Number(k.has("KeyS") || k.has("ArrowDown")) -
         Number(k.has("KeyW") || k.has("ArrowUp")),
-      sprint: k.has("ShiftLeft") || k.has("ShiftRight"),
+      sprint: this.shiftHeld || k.has("ShiftLeft") || k.has("ShiftRight"),
       pass: p.has("Space"),
       shoot: p.has("KeyJ"),
       through: p.has("KeyK"),
@@ -108,7 +115,7 @@ export class InputManager {
     return i;
   }
   reset() {
-    this.keys.clear();this.pressed.clear();this.touch=idle();this.heldTouch.clear();
+    this.shiftHeld=false;this.keys.clear();this.pressed.clear();this.touch=idle();this.heldTouch.clear();
     document.querySelectorAll('[data-action]').forEach(el=>el.classList.remove('held'));
     const stick=document.querySelector<HTMLElement>('#joystick');stick?.style.setProperty('--jx','0px');stick?.style.setProperty('--jy','0px');
   }

@@ -21,11 +21,15 @@ export function kitPattern(color:string){
  const key=color.toLowerCase();if(kits.has(key))return kits.get(key)!;
  const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d')!;
  x.fillStyle='#faf8ef';x.fillRect(0,0,512,512);
- const style=key==='#f4c64b'?0:key==='#5cc5b5'?1:key==='#e8815d'?2:3;
+ const palette=['#f4c64b','#5cc5b5','#e8815d','#b5a3dc','#6d9fe8','#e7eadb','#d376b6','#a7ce76'];const style=Math.max(0,palette.indexOf(key));
  x.fillStyle=style===0?'#304b33':'#253b44';
  if(style===0){for(const offset of [-512,0,512]){x.beginPath();x.moveTo(offset+30,0);x.lineTo(offset+95,0);x.lineTo(offset+350,512);x.lineTo(offset+285,512);x.fill();}}
  if(style===1)for(let n=0;n<512;n+=38)x.fillRect(n,0,15,512);
  if(style===2)for(let n=0;n<512;n+=100)x.fillRect(0,n,512,34);
+ if(style===4){x.fillRect(125,0,45,512);x.fillRect(342,0,45,512);}
+ if(style===5){for(let y=60;y<512;y+=95){x.beginPath();x.moveTo(0,y);x.lineTo(256,y+60);x.lineTo(512,y);x.lineTo(512,y+14);x.lineTo(256,y+74);x.lineTo(0,y+14);x.fill();}}
+ if(style===6){x.fillRect(190,0,130,512);x.fillStyle='#f0e5cc';x.fillRect(180,0,10,512);x.fillRect(320,0,10,512);}
+ if(style===7){for(let y=0;y<512;y+=64)for(let n=0;n<512;n+=64)if((n/64+y/64)%2===0)x.fillRect(n,y,64,64);}
  if(style===3){x.fillRect(0,290,512,60);x.fillRect(0,365,512,8);}
  x.fillStyle='#23382e';x.fillRect(0,0,512,15);x.fillRect(0,493,512,19);
  for(let n=0;n<512;n+=3){x.fillStyle=n%2?'#0000000a':'#ffffff12';x.fillRect(n,0,1,512);x.fillRect(0,n,512,1);}

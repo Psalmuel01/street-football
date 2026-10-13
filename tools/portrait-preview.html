@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Original club portrait authoring</title><style>body{margin:0;background:#142421;color:#eee;font:14px sans-serif}canvas{position:absolute;left:0;top:0;width:320px;height:380px}aside{margin-left:336px;padding:20px}select{display:block;margin:10px 0;padding:10px}#status{display:block}</style></head><body><aside><h1>Club portrait authoring</h1><label>Club<select id="club"></select></label><label>Player<select id="player"></select></label><output id="status"></output><a id="export" download="portrait.png">Export PNG</a></aside><script type="module">
+import * as THREE from '/node_modules/three/build/three.module.js';
+import {teams} from '/src/content/teams.ts';
+import {createCharacter,disposeCharacter,animateCharacter,prepareCharacterAsset} from '/src/game/character.ts';
+await prepareCharacterAsset();
+const club=document.querySelector('#club'),player=document.querySelector('#player');
+club.innerHTML=teams.map((t,i)=>`<option value="${i}">${t.name}</option>`).join('');player.innerHTML=Array.from({length:9},(_,i)=>`<option value="${i}">Player ${i+1}</option>`).join('');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});renderer.setPixelRatio(1);renderer.setSize(320,380);renderer.setClearColor(0,0);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;document.body.prepend(renderer.domElement);
+const scene=new THREE.Scene();scene.add(new THREE.HemisphereLight('#eff5ff','#887b5a',2.2));const key=new THREE.DirectionalLight('#fff0d5',3);key.position.set(-2,4,5);scene.add(key);const rim=new THREE.DirectionalLight('#91d7cf',2);rim.position.set(3,2,-3);scene.add(rim);
+const camera=new THREE.PerspectiveCamera(27,320/380,.1,20);camera.position.set(.16,1.47,2.75);camera.lookAt(0,1.26,0);let rig;
+function render(){if(rig){scene.remove(rig.root);disposeCharacter(rig);}const t=Number(club.value),i=Number(player.value);rig=createCharacter(i===0||i===8?'#cc765b':teams[t].color,t<4?i:t*9+i,true,i===0?1:i===8?20:i+6);rig.root.rotation.y=-.1;scene.add(rig.root);animateCharacter(rig,0,0,0);renderer.render(scene,camera);document.querySelector('#export').href=renderer.domElement.toDataURL('image/png');document.querySelector('#status').textContent=`Ready: ${t}-${i}`;}
+club.onchange=player.onchange=render;render();
+</script></body></html>

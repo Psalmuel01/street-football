@@ -11,9 +11,9 @@ try{
   window.renderPortrait=(color,index,number)=>{const rig=C.createCharacter(color,index,true,number);rig.root.rotation.y=-.1;scene.add(rig.root);C.animateCharacter(rig,0,0,0);renderer.render(scene,camera);const url=renderer.domElement.toDataURL('image/png');scene.remove(rig.root);C.disposeCharacter(rig);return url;};
  });
  await mkdir('public/assets/portraits',{recursive:true});
- const colors=['#f4c64b','#5cc5b5','#e8815d','#b5a3dc'];
- for(let team=0;team<4;team++)for(let i=0;i<9;i++){
-  const data=await page.evaluate(([color,i])=>window.renderPortrait(i===0||i===8?'#cc765b':color,i,i===0?1:i===8?20:i+6),[colors[team],i]);await writeFile(`public/assets/portraits/${team}-${i}.png`,Buffer.from(data.split(',')[1],'base64'));
+ const colors=['#f4c64b','#5cc5b5','#e8815d','#b5a3dc','#6d9fe8','#e7eadb','#d376b6','#a7ce76'];
+ for(let team=0;team<8;team++)for(let i=0;i<9;i++){
+  const data=await page.evaluate(([color,i,team])=>window.renderPortrait(i===0||i===8?'#cc765b':color,team<4?i:team*9+i,i===0?1:i===8?20:i+6),[colors[team],i,team]);await writeFile(`public/assets/portraits/${team}-${i}.png`,Buffer.from(data.split(',')[1],'base64'));
  }
- console.log('36 original in-game character portraits rendered.');
+ console.log('72 original in-game character portraits rendered.');
 }finally{await browser.close();}

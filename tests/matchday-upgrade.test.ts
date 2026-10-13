@@ -5,7 +5,7 @@ import {dribbleTouch,receptionVelocity} from '../src/game/football/touch';
 test('cup visits each rival, persists results, awards a title once and retains records on a new season',()=>{
  let c=emptyCup(2);const rivals=[];
  for(const score of [[2,0],[1,1],[3,0]]){rivals.push(cupOpponent(c));c=recordCup(c,score[0],score[1]);c=readCup(JSON.stringify(c));}
- assert.deepEqual(rivals,[3,0,1]);assert.equal(points(c),7);assert.equal(c.titles,1);assert.equal(c.bestPoints,7);
+ assert.deepEqual(rivals,[3,4,5]);assert.equal(points(c),7);assert.equal(c.titles,1);assert.equal(c.bestPoints,7);
  assert.deepEqual(recordCup(c,5,0),c);const next=newSeason(c,1);assert.equal(next.results.length,0);assert.equal(next.titles,1);assert.equal(next.team,1);
 });
 test('corrupt or incompatible cup saves recover to an empty season',()=>{
@@ -40,10 +40,10 @@ test('each venue owns a different environment and switching displays exactly one
  const context={fillRect(){},fillText(){},fillStyle:'',textAlign:'',font:''};
  Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement(){return {width:0,height:0,getContext(){return context;}};}}});
  try{
-  const {Scene,InstancedMesh}=await import('three');const {Venues}=await import('../src/game/venues');const venues=new Venues(new Scene());
-  assert.equal(venues.root.children.length,3);const [yard,waterfront,arena]=venues.root.children;
-  assert.ok(waterfront.children.length>yard.children.length*10);assert.ok(arena.children.some(child=>child instanceof InstancedMesh));
-  venues.set('marina');assert.deepEqual(venues.root.children.map(g=>g.visible),[false,true,false]);
-  venues.set('arena');assert.deepEqual(venues.root.children.map(g=>g.visible),[false,false,true]);
+  const {Scene,InstancedMesh,Box3}=await import('three');const {Venues}=await import('../src/game/venues');const venues=new Venues(new Scene());
+  assert.equal(venues.root.children.length,5);const waterfront=venues.root.getObjectByName('marina')!,arena=venues.root.getObjectByName('arena')!;
+  assert.ok(new Box3().setFromObject(waterfront).min.z < -90);assert.ok(new Box3().setFromObject(arena).min.z > -50);assert.ok(arena.children.some(child=>child instanceof InstancedMesh));
+  venues.set('marina');assert.deepEqual(venues.root.children.filter(g=>g.visible).map(g=>g.name),['marina']);
+  venues.set('arena');assert.deepEqual(venues.root.children.filter(g=>g.visible).map(g=>g.name),['arena']);
  }finally{if(prior)Object.defineProperty(globalThis,'document',prior);else Reflect.deleteProperty(globalThis,'document');}
 });

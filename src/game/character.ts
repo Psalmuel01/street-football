@@ -5,7 +5,7 @@ import { clone } from "three/addons/utils/SkeletonUtils.js";
 import { buildFootballer, type BoneName } from "./assets/footballer";
 import { buildClips, type ClipName } from "./animation/clips";
 import { capturedFootContacts } from "./animation/IKController";
-import capturedGaits from "./assets/cmu-gaits.json";
+let capturedGaits:{clips:{name:string;duration:number;tracks:{name:string;type:string;times:number[];values:number[]}[]}[]}|null=null;
 import { selectMotionPack, clipDuration } from "./animation/AssetPipeline";
 import { evaluateAnimation, type LocomotionState } from "./animation/AnimationGraph";
 import { type PlayerAction } from "./animation/actions";
@@ -14,32 +14,34 @@ let template: THREE.Group | null = null;
 let crowdTemplate: THREE.Group | null = null;
 function prototypeClips() {
   const clips = buildClips();
-  for (const captured of capturedGaits.clips) {
+  for (const captured of capturedGaits?.clips??[]) {
     const index = clips.findIndex(clip => clip.name === captured.name);
     if (index >= 0) clips[index] = THREE.AnimationClip.parse({uuid: THREE.MathUtils.generateUUID(), blendMode: THREE.NormalAnimationBlendMode, ...captured});
   }
   return clips;
 }
 let clips = prototypeClips();
-export let characterMotionSource = "captured-locomotion-evaluation";
+export let characterMotionSource = "procedural-prototype";
 export async function prepareCharacterAsset() {
+  const gaits=import('./assets/cmu-gaits.json');
   try {
-    const gltf = await new GLTFLoader().loadAsync(
-      "/assets/characters/lagos-footballer.glb",
-    );
+    const [data,gltf]=await Promise.all([gaits,new GLTFLoader().loadAsync('/assets/characters/lagos-footballer.glb')]);
+    capturedGaits=data.default;
     template = gltf.scene;
     const motion = selectMotionPack(gltf.animations, prototypeClips(), gltf.scene.userData.motion);
     clips = motion.clips;
-    characterMotionSource = motion.source === "procedural-prototype" ? "captured-locomotion-evaluation" : motion.source;
+    characterMotionSource = motion.source === "procedural-prototype" ? (capturedGaits?"captured-gait-with-original-overlays":"procedural-prototype") : motion.source;
   } catch {
+    capturedGaits=(await gaits.catch(()=>null))?.default??null;
     template = buildFootballer().root;
-    clips = prototypeClips(); characterMotionSource = "captured-locomotion-evaluation";
+    clips = prototypeClips(); characterMotionSource = capturedGaits?"captured-gait-with-original-overlays":"procedural-prototype";
     console.info("Using original local character source; GLB not available.");
   }
 }
 export type CharacterRig = {
   root: THREE.Group;
   motionSource: string;
+  detail:boolean;
   footPlants?: { points: (THREE.Vector3 | null)[]; stance: boolean[]; time: number; position: THREE.Vector3 };
   authoredPose?: { bone: THREE.Bone; rotation: THREE.Quaternion; position: THREE.Vector3 }[];
   locomotionState?: LocomotionState;
@@ -138,7 +140,7 @@ export function createCharacter(
     canvas.width = 128;
     canvas.height = 128;
     const ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "#f3ecd5";
+    const shirtColour=new THREE.Color(color);ctx.fillStyle=shirtColour.r*.21+shirtColour.g*.72+shirtColour.b*.07>.65?'#20372f':'#f3ecd5';
     ctx.textAlign = "center";
     ctx.font = "600 64px sans-serif";
     ctx.fillText(String(jerseyNumber), 64, 84);
@@ -195,6 +197,7 @@ export function createCharacter(
   }
   return {
     root,
+    detail,
     motionSource: characterMotionSource,
     bones,
     hips: bones.pelvis,
@@ -225,6 +228,7 @@ export function animateCharacter(
   stride?: number,
   motion?: { receive: number; recovery: number; vx: number; vy: number; facingX: number; facingY: number },
 ) {
+  if(!rig.detail&&rig.motionSample&&time>rig.motionSample.time&&time-rig.motionSample.time<1/24)return;
   // PropertyMixer skips identical samples. Restore the last unmodified sample before
   // evaluating so procedural lean/IK never become the next frame's base pose.
   for (const pose of rig.authoredPose ?? []) {
@@ -243,7 +247,7 @@ export function animateCharacter(
   const previous = rig.motionSample;
   const braking = previous && time === previous.time ? previous.braking : !!previous && time > previous.time && speed < previous.speed - .05;
   const travelAngle = motion && speed > .15 ? Math.atan2(motion.vx * motion.facingY - motion.vy * motion.facingX, motion.vx * motion.facingX + motion.vy * motion.facingY) : 0;
-  const graph = evaluateAnimation(speed, action, travelAngle, braking);
+  const graph = evaluateAnimation(speed, action, travelAngle, braking,motion?.receive??0);
   rig.locomotionState = graph.state;
   rig.motionSample = {time, speed, braking};
   const fast = THREE.MathUtils.clamp((speed - 6) / 2, 0, 1);
@@ -252,6 +256,8 @@ export function animateCharacter(
   set("walk", graph.weights.walk, (cycle % 1) * clipDuration(rig.actions, "walk"));
   set("run", graph.weights.run, (cycle % 1) * clipDuration(rig.actions, "run"));
   set("sprint", graph.weights.sprint, (cycle % 1) * clipDuration(rig.actions, "sprint"));
+  set('cutLeft',graph.weights.cutLeft,.18);set('cutRight',graph.weights.cutRight,.18);
+  set('stop',graph.weights.stop,.14);set('receive',graph.weights.receive,.16);
   if (action) {
     const name: ClipName =
       action.kind === "dive"
@@ -277,7 +283,6 @@ export function animateCharacter(
       if(braking)rig.bones.spine.rotation.x -= .04*Math.min(1,speed/5);
     }
     if (motion.recovery > 0) { rig.bones.spine.rotation.x += .08 * Math.min(1,motion.recovery/.3); rig.arms[0].rotation.z -= .35; rig.arms[1].rotation.z += .35; }
-    if (motion.receive > 0) { const weight = Math.min(1,motion.receive / .18); rig.legs[1].rotation.x -= .35 * weight; rig.legs[1].rotation.y += .3 * weight; rig.knees[1].rotation.x += .35 * weight; rig.arms[0].rotation.z -= .2 * weight; }
   }
   // Locomotion owns the lower body. Feet trace a stance/swing cycle and stance
   // anchors stay in world space, including during a turn. Action clips retain

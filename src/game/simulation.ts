@@ -1,8 +1,9 @@
+import {supportTarget} from './football/support';
 import {dribbleTouch,receptionVelocity} from './football/touch';
 import {type MatchMoment,type MomentKind} from "./reactions";
 import {formations,type Formation} from "../content/formations";
 import {steer,accelerate} from './simulation/Movement';
-import {gameplay} from "./gameplay.config";
+import {gameplay,difficultyTier,difficultyTiers} from "./gameplay.config";
 import {passOptions,passDestination} from "./football/passing";
 import {conditions,type Conditions} from "../content/conditions";
 import {PITCH} from "./pitch";
@@ -213,13 +214,62 @@ export class Match {
     }
   }
   nearest(team: number, exclude = -1) {
-    return this.players
-      .filter((p) => p.team === team && !p.keeper && p.id !== exclude)
-      .sort(
-        (a, b) =>
-          Math.hypot(a.x - this.ball.x, a.y - this.ball.y) -
-          Math.hypot(b.x - this.ball.x, b.y - this.ball.y),
-      )[0];
+    let nearest:Player|undefined,distance=Infinity;
+    for(const p of this.players){if(p.team!==team||p.keeper||p.id===exclude)continue;const d=(p.x-this.ball.x)**2+(p.y-this.ball.y)**2;if(d<distance){distance=d;nearest=p;}}
+    return nearest!;
+  }
+  /** The selected difficulty, clamped to a real tier. Decisions only — never speed or physics. */
+  get tier(){return difficultyTier(this.difficulty);}
+  /**
+   * Your own five always play the baseline tier, so choosing a harder game never makes the
+   * players you are not controlling worse and never secretly boosts your opponent's legs.
+   */
+  aiTuning(team:number){return team===0?difficultyTiers[1]:this.tier;}
+  /** Deterministic roll from simulation state: identical at every frame rate, on every machine. */
+  private roll(salt:number,chance:number){
+    if(!(chance>0))return false;
+    const n=Math.sin(this.elapsed*12.9898+this.eventSerial*78.233+salt*37.719)*43758.5453;
+    return n-Math.floor(n)<chance;
+  }
+  /** True when an opponent stands in the lane between the shooter and the goal. */
+  private laneBlocked(p:Player,dir:number,targetY:number){
+    const dx=dir*31-p.x,dy=targetY-p.y,dd=dx*dx+dy*dy||1;
+    for(const q of this.players){
+      if(q.team===p.team)continue;
+      const along=((q.x-p.x)*dx+(q.y-p.y)*dy)/dd;
+      if(along<=.08||along>=1)continue;
+      if(Math.hypot(q.x-p.x-dx*along,q.y-p.y-dy*along)<1.5)return true;
+    }
+    return false;
+  }
+  /** Shot selection by distance, lane and composure. Never shooting power or accuracy. */
+  private shouldShoot(p:Player,dir:number){
+    const tier=this.aiTuning(p.team);
+    const distance=Math.hypot(dir*31-p.x,p.y);
+    if(distance>tier.shootingRange)return false;
+    const targetY=this.players[(1-p.team)*5].y>0?-1.8:1.8;
+    if(!this.laneBlocked(p,dir,targetY))return true;
+    return distance<tier.shootingRange*.75&&this.roll(p.id,(1-tier.composure)*.4);
+  }
+  /** Man-marking: goal-side of the most advanced unmarked opponent. Shape discipline only. */
+  private markerTarget(p:Player){
+    if(p.keeper||this.training)return null;
+    const carrier=this.owner===null?null:this.players[this.owner];
+    if(!carrier||carrier.team===p.team)return null;
+    if(this.aiTuning(p.team).shapeDiscipline<.7)return null;
+    if(p.id===this.nearest(p.team).id)return null;
+    if(Math.hypot(p.x-this.ball.x,p.y-this.ball.y)<3.5)return null;
+    const dir=p.team===0?1:-1;
+    const chaser=this.nearest(p.team).id;
+    const index=this.players.filter(q=>q.team===p.team&&!q.keeper&&q.id!==chaser&&q.id<p.id).length;
+    const threat=this.players.filter(q=>q.team!==p.team&&!q.keeper&&q.id!==carrier.id).sort((a,b)=>a.x*dir-b.x*dir)[index];
+    return threat??null;
+  }
+  /** Organised sides send a second player once the ball reaches their half. */
+  private pressSupport(p:Player,chaser:number){
+    if(p.keeper||p.id===chaser)return false;
+    if(this.aiTuning(p.team).shapeDiscipline<.75)return false;
+    return this.ball.x*(p.team===0?1:-1)<-2&&this.nearest(p.team,chaser).id===p.id;
   }
   beginAction(p: Player, kind: ActionKind, side = 1) {
     p.action = {
@@ -353,11 +403,16 @@ export class Match {
     // A slide commits to the current direction; it cannot home in on a moving carrier.
     if(slide){p.vx=p.facingX*8;p.vy=p.facingY*8;}
   }
-  pass(p: Player, through = false, lob = false, aim?:{x:number;y:number}) {
+  /**
+   * `optionIndex` is decision quality, not ability: it lets a rushed AI settle for a worse
+   * pass target while the ball itself is struck with exactly the same physics.
+   */
+  pass(p: Player, through = false, lob = false, aim?:{x:number;y:number}, optionIndex=0) {
     const magnitude=aim?Math.hypot(aim.x,aim.y):0;
     const intent=aim&&magnitude>.15?{...p,facingX:aim.x/magnitude,facingY:aim.y/magnitude}:p;
     const options=passOptions(intent,this.players,through);
-    const best=options[0];this.passCandidate=best??null;
+    const best=options.length?options[Math.max(0,Math.min(options.length-1,optionIndex))]:undefined;
+    this.passCandidate=best??null;
     // A protected restart always has a legal short outlet, irrespective of facing.
     const target=best?this.players[best.receiver]:(this.restartPending||this.setPiece)?this.players.filter(q=>q.team===p.team&&q.id!==p.id&&!q.keeper).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]:null;
     if(!target)return false;
@@ -390,6 +445,7 @@ export class Match {
       else if(this.restartTime>1.4){if(restart.penalty||Math.abs(restart.x)>16)this.shoot(taker);else this.pass(taker);}
       this.advanceActions(dt);return;
     }
+    if(this.state==="KICKOFF"&&this.kickoffTeam===0&&(input.pass||input.through||input.shoot||input.tackle)){this.state="PLAYING";this.stateTime=0;}
     if (this.state !== "PLAYING") {
       if (this.state === "GOAL") this.advanceActions(dt);
       this.stateTime -= dt;
@@ -483,39 +539,41 @@ export class Match {
             dir * -28 +
             Math.min(3, Math.max(0, dir * this.ball.x + 26) * 0.09) * dir;
           ty = Math.max(-3, Math.min(3, this.ball.y * 0.4));
-          if ((p.team===0&&input.keeperRush) || Math.hypot(p.x - this.ball.x, p.y - this.ball.y) < 4) {
+          if ((p.team===0&&input.keeperRush) || Math.hypot(p.x - this.ball.x, p.y - this.ball.y) < 2.5+this.aiTuning(p.team).keeperRush) {
             tx = this.ball.x;
             ty = this.ball.y;
           }
         } else if (this.owner === p.id) {
           tx = dir * 28;
           ty = p.y * 0.6;
-          if (p.cooldown === 0) {
-            if (dir * p.x > 16 && Math.abs(p.y) < 9) this.shoot(p);
-            else if (
-              this.aiTime % gameplay.ai.decisionInterval[p.team===0?1:this.difficulty] < dt &&
-              this.players.some(
-                (q) =>
-                  q.team !== p.team && Math.hypot(q.x - p.x, q.y - p.y) < 3,
-              )
-            )
-              this.pass(p);
+          const tier=this.aiTuning(p.team);
+          if (p.cooldown === 0 && this.aiTime % tier.decisionInterval < dt) {
+            const pressure=this.players.some(q=>q.team!==p.team&&Math.hypot(q.x-p.x,q.y-p.y)<3);
+            const option=passOptions(p,this.players)[0];
+            // Composure picks the ball: a rushed side settles for its second-best option.
+            const settle=this.roll(p.id,1-tier.composure)?1:0;
+            if (this.shouldShoot(p,dir)) this.shoot(p);
+            else if (pressure) this.pass(p,false,false,undefined,settle);
+            else if (!!option&&option.score>(this.tactics[p.team]==='possession'?4:8)&&this.roll(p.id+5,tier.passVision*(this.tactics[p.team]==='possession'?.75:.3))) this.pass(p,this.tactics[p.team]==='counter'&&option.distance>12,false,undefined,settle);
           }
         } else if(this.passFlight?.receiver===p.id) {
           tx=this.passFlight.targetX;ty=this.passFlight.targetY;
-        } else if ((chase[p.team] === p.id || ((this.tactics[p.team]==='press'||(p.team===0&&input.secondPress))&&this.nearest(p.team,chase[p.team]).id===p.id)) && own?.team !== p.team) {
+        } else if ((chase[p.team] === p.id || this.pressSupport(p,chase[p.team]) || ((this.tactics[p.team]==='press'||(p.team===0&&input.secondPress))&&this.nearest(p.team,chase[p.team]).id===p.id)) && own?.team !== p.team) {
           tx = this.ball.x;
           ty = this.ball.y;
         } else {
+          const mark=this.markerTarget(p);
+          if(mark){tx=mark.x-dir*1.5;ty=mark.y*.6;}
+          else {
           tx =
-            p.homeX + this.ball.x * 0.42 + (own?.team === p.team ? dir * (this.tactics[p.team]==='counter'?9:5) : this.tactics[p.team]==='counter'?-dir*3:0);
-          ty = p.homeY + this.ball.y * 0.22;
+            p.homeX + this.ball.x * (this.tactics[p.team]==='compact'?.22:.42) + (own?.team === p.team ? dir * (this.tactics[p.team]==='counter'?9:5) : this.tactics[p.team]==='counter'?-dir*3:0);
+          ty = p.homeY*(this.tactics[p.team]==='compact'?.7:1) + this.ball.y * .22;
+          }
         }
         if(own?.team===p.team && !p.keeper && this.owner!==p.id && this.passFlight?.receiver!==p.id){
           const slot=p.id%5, carrier=own, counter=this.tactics[p.team]==='counter';
           if(p.runUntil>this.elapsed){tx=p.x+dir*8;ty=p.homeY; sprint=true;}
-          else if(slot<=2){tx=carrier.x-dir*(slot===1?(counter?11:8):4);ty=slot===1?-10:10;}
-          else {tx=carrier.x+dir*(slot===3?(counter?8:5):(counter?14:10));ty=slot===3?-7:7;}
+          else {const support=supportTarget(p,carrier,this.tactics[p.team],this.players);tx=support.x;ty=support.y;}
           tx=Math.max(-26,Math.min(26,tx));
         }
         if(this.tactics[p.team]==='press'&&own?.team!==p.team&&!p.keeper)sprint=true;
@@ -531,7 +589,7 @@ export class Match {
           own &&
           own.team !== p.team &&
           !p.keeper &&
-          Math.hypot(p.x - own.x, p.y - own.y) < gameplay.ai.pressureDistance[p.team===0?1:this.difficulty] &&
+          Math.hypot(p.x - own.x, p.y - own.y) < this.aiTuning(p.team).pressureDistance &&
           this.lock === 0 && !this.training
         )
           this.tackle(p);
@@ -546,7 +604,7 @@ export class Match {
           const predictedY = this.ball.y + this.ball.vy * travel;
           if (
             travel > 0 &&
-            travel < [0.2, 0.28, 0.36][this.difficulty] &&
+            travel < this.aiTuning(p.team).keeperReaction &&
             Math.abs(predictedY - p.y) < 2.2 &&
             this.ball.z < 1.6
           ) {
@@ -653,6 +711,10 @@ export class Match {
     this.ball.x += this.ball.vx * dt;
     this.ball.y += this.ball.vy * dt;
     if (Math.abs(this.ball.x) > PITCH.halfLength) {
+      const post=Math.abs(Math.abs(this.ball.y)-PITCH.goalHalfWidth)<.2&&this.ball.z<PITCH.goalHeight+.13;
+      const bar=Math.abs(this.ball.z-PITCH.goalHeight)<.15&&Math.abs(this.ball.y)<PITCH.goalHalfWidth+.1;
+      if(post||bar){this.ball.x=Math.sign(this.ball.x)*(PITCH.halfLength-.15);this.ball.vx*=-.72;if(bar)this.ball.vz=-Math.abs(this.ball.vz)*.6;this.owner=null;this.passFlight=null;this.shotFlight=null;this.lock=.08;this.emit('post');}
+      else
       if (Math.abs(this.ball.y) < PITCH.goalHalfWidth && this.ball.z < PITCH.goalHeight) {
         const team = this.ball.x > 0 ? 0 : 1;
         const tied=this.score[0]===this.score[1];this.score[team]++;
@@ -673,9 +735,8 @@ export class Match {
         this.emit("goal");
         return;
       }
-      if(this.shotFlight){this.react(Math.abs(this.ball.y)<PITCH.goalHalfWidth+1.4?'near-goal':'miss',this.shotFlight.team,.8);this.shotFlight=null;}
-      this.ball.x = Math.sign(this.ball.x) * (PITCH.halfLength-.1);
-      this.ball.vx *= -0.65;
+      if(!post&&!bar&&this.shotFlight){this.react(Math.abs(this.ball.y)<PITCH.goalHalfWidth+1.4?'near-goal':'miss',this.shotFlight.team,.8);this.shotFlight=null;}
+      if(!post&&!bar){this.ball.x = Math.sign(this.ball.x) * (PITCH.halfLength-.1);this.ball.vx *= -.65;}
       this.owner = null;
       this.passFlight=null;
     }

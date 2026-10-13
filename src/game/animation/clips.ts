@@ -3,6 +3,10 @@ import { boneLayout, type BoneName } from "../assets/footballer";
 import { actionTiming } from "./actions";
 export const clipNames = [
   "idle",
+  "cutLeft",
+  "cutRight",
+  "stop",
+  "receive",
   "walk",
   "run",
   "sprint",
@@ -48,6 +52,18 @@ export function samplePose(name: ClipName, t: number): Pose {
   if (name === "idle") {
     r.chest[0] = Math.sin(t * Math.PI) * 0.012;
     r.head[1] = Math.sin(t * Math.PI * 0.5) * 0.04;
+    return p;
+  }
+  // Original authored procedural poses, not recorded football motion capture.
+  if(name==='cutLeft'||name==='cutRight'||name==='stop'||name==='receive'){
+    const duration=name==='stop'?.28:name==='receive'?.32:.36,weight=Math.sin(Math.PI*Math.min(1,t/duration));
+    const side=name==='cutLeft'?-1:1;
+    p.position[1]-=weight*.05;
+    r.kneeL[0]=weight*.25;r.kneeR[0]=weight*.34;
+    r.armL[2]-=weight*.22;r.armR[2]+=weight*.22;
+    if(name==='stop'){r.spine[0]=-weight*.11;r.legL[0]=weight*.16;r.legR[0]=-weight*.22;r.elbowL[0]=r.elbowR[0]=-weight*.4;}
+    else if(name==='receive'){r.legR[1]=weight*.26;r.legR[0]=-weight*.28;r.kneeR[0]=weight*.55;r.chest[1]=weight*.12;}
+    else{r.pelvis[1]=side*weight*.12;r.spine[2]=-side*weight*.18;r.chest[1]=side*weight*.13;r.legL[2]=side*weight*.07;r.legR[2]=side*weight*.07;}
     return p;
   }
   if (name === "walk" || name === "run" || name === "sprint") {
@@ -205,7 +221,7 @@ export function samplePose(name: ClipName, t: number): Pose {
 export function buildClips() {
   return clipNames.map((name) => {
     const duration =
-      name === "idle"
+      name === "stop" ? .28 : name === "receive" ? .32 : name === "cutLeft" || name === "cutRight" ? .36 : name === "idle"
         ? 4
         : name === "walk" ? 1.0 : name === "run"
           ? 0.64

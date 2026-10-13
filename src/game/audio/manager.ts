@@ -16,6 +16,7 @@ export class AudioManager {
  private crowd?:GainNode;private ambience?:GainNode;private speaker?:StereoPannerNode;private speakerFilter?:BiquadFilterNode;
  private noise?:AudioBuffer;private voiceSource?:AudioBufferSourceNode;private priority=0;private request=0;private lastVoiceEvent='';
  private buffers=new Map<string,Promise<AudioBuffer>>();private lastVoice=-100;private lastVariants=new Map<string,number>();
+ private stepPhase=0;
  private atmosphereTime=0;private stepTime=0;private trafficTime=0;private duckUntil=0;private mixTime=0;
  onChange:()=>void=()=>{};
  get music(){return this.decks[this.current]?.element;}
@@ -52,7 +53,7 @@ export class AudioManager {
   }
   if(this.context.state==='suspended')await this.context.resume();
  }
- async play(){await this.unlock();this.wanted=true;this.applyLevels();this.error='';try{await this.arrange();localStorage.setItem('lagos-music-enabled','on');}catch{this.wanted=false;this.applyLevels();this.error='Tap music to enable audio.';}this.onChange();}
+ async play(){await this.unlock();this.wanted=true;this.applyLevels();this.error='';try{await this.arrange();try{localStorage.setItem('lagos-music-enabled','on');}catch{}}catch{this.wanted=false;this.applyLevels();this.error='Tap music to enable audio.';}this.onChange();}
  async toggle(){if(this.wanted){this.wanted=false;this.applyLevels();this.fadeDecks();try{localStorage.setItem('lagos-music-enabled','off');}catch{}}else await this.play();this.onChange();}
  async firstInteraction(){try{if(localStorage.getItem('lagos-music-enabled')==='off')return;}catch{}if(!this.wanted)await this.play();}
  setVolume(value:number){this.setBus('music',value);}
@@ -82,13 +83,15 @@ export class AudioManager {
   this.decks[this.current]?.gain.gain.setTargetAtTime((this.wanted?sceneGain[this.scene]:0)*proximity*(t<this.duckUntil?.4:1),t,.22);
   this.speaker?.pan.setTargetAtTime(diegetic?Math.max(-.8,Math.min(.8,(-12-x)/25)):0,t,.3);this.speakerFilter?.frequency.setTargetAtTime(diegetic?2200:18000,t,.3);
  }
- update(dt:number,playing:boolean,speed:number,wet=false,x=0,y=0){
+ update(dt:number,playing:boolean,speed:number,wet=false,x=0,y=0,stride?:number){
   if(!this.context)return;this.active=this.inMatch&&playing;this.mixTime+=dt;if(this.mixTime>.05){this.mixTime=0;this.mix(x,y);}
   this.crowd?.gain.setTargetAtTime(this.inMatch?(playing?(this.ground==='arena'?.20:this.ground==='marina'?.08:.14):.05):0,this.context.currentTime,.5);this.ambience?.gain.setTargetAtTime(this.active?.025:0,this.context.currentTime,.6);
   if(!this.active)return;this.atmosphereTime+=dt;this.stepTime+=dt;this.trafficTime+=dt;
   if(this.atmosphereTime>22)this.atmosphereTime=0;
   if(this.trafficTime>19){this.trafficTime=0;if(this.ground==='surulere')this.horn();}
-  if(this.effects&&speed>1&&this.stepTime>Math.max(.18,.55-speed*.033)){this.stepTime=0;this.impact(wet?210:110,wet?.08:.035,.09,'sfx');}
+  const phase=stride===undefined?undefined:Math.floor(stride*2);
+  const step=phase===undefined?this.stepTime>Math.max(.18,.55-speed*.033):phase!==this.stepPhase;
+  if(this.effects&&speed>1&&step){this.stepTime=0;this.impact(wet?210:110,wet?.06:.035,.09,'sfx');}if(phase!==undefined)this.stepPhase=phase;
  }
  private load(url:string){let pending=this.buffers.get(url);if(!pending){pending=fetch(url).then(r=>{if(!r.ok)throw new Error('Audio unavailable');return r.arrayBuffer();}).then(b=>this.context!.decodeAudioData(b)).catch(e=>{this.buffers.delete(url);throw e;});this.buffers.set(url,pending);}return pending;}
  async previewCallout(){await this.unlock();await this.recordedCrowd('goal',true);}
@@ -98,24 +101,27 @@ export class AudioManager {
  }
  private horn(){if(!this.context)return;for(const hz of [330,415]){const osc=this.context.createOscillator(),gain=this.context.createGain(),pan=this.context.createStereoPanner(),t=this.context.currentTime;osc.type='triangle';osc.frequency.value=hz;gain.gain.setValueAtTime(.0001,t);gain.gain.linearRampToValueAtTime(.025,t+.05);gain.gain.exponentialRampToValueAtTime(.0001,t+.45);pan.pan.value=-.65;osc.connect(gain).connect(pan).connect(this.buses.environment);osc.start();osc.stop(t+.5);}}
  ui(){if(this.context)this.impact(560,.025,.045,'ui');}
+ private stings=new Set<AudioBufferSourceNode>();
  private async sting(kind:'intro'|'goal'){
-  if(!this.context||!this.wanted||this.hostPaused||document.hidden)return;const scene=this.scene;
-  try{const buffer=await this.load(musicUrl(kind==='intro'?'intro':'champion',kind==='intro'?musicPack.intro[this.community%2].id:'ground-owner'));if(!this.context||!this.wanted||scene!==this.scene)return;
-   const source=this.context.createBufferSource(),gain=this.context.createGain(),t=this.context.currentTime;source.buffer=buffer;gain.gain.setValueAtTime(.5,t);gain.gain.setTargetAtTime(.0001,t+(kind==='intro'?2:1),.35);source.connect(gain).connect(this.buses.music);source.start();source.stop(t+4);this.duckUntil=t+3;
+  if(!this.context||!this.wanted||this.hostPaused||document.hidden)return;const scene=this.scene,generation=this.reactionGeneration;
+  try{const buffer=await this.load(musicUrl(kind==='intro'?'intro':'champion',kind==='intro'?musicPack.intro[this.community%2].id:'ground-owner'));if(!this.context||!this.wanted||scene!==this.scene||generation!==this.reactionGeneration||this.hostPaused||this.matchPaused||document.hidden)return;
+   const source=this.context.createBufferSource(),gain=this.context.createGain(),t=this.context.currentTime;source.buffer=buffer;gain.gain.setValueAtTime(.5,t);gain.gain.setTargetAtTime(.0001,t+(kind==='intro'?2:1),.35);source.connect(gain).connect(this.buses.music);this.stings.add(source);source.onended=()=>{this.stings.delete(source);source.disconnect();gain.disconnect();};source.start();source.stop(t+4);this.duckUntil=t+3;
   }catch{}
  }
  react(moment:MatchMoment){if(this.director.accept(moment))this.cue(moment.kind);}
  private reactionSources=new Set<AudioBufferSourceNode>();
- private reactionGeneration=0;
+ private reactionGeneration=0;private lastReaction=-100;
  private async recordedCrowd(event:string,preview=false){
   if(!this.context||this.hostPaused||this.matchPaused||document.hidden||(!preview&&!this.inMatch))return;
   const positive=['goal','late-winner','late-lead','big-save','nutmeg','save'].includes(event);
-  const near=['miss','near-goal','hard-tackle'].includes(event);
+  const near=['post','miss','near-goal','hard-tackle'].includes(event);
   if(!positive&&!near)return;
+  if(!preview&&this.context.currentTime-this.lastReaction<.65)return;this.lastReaction=this.context.currentTime;
   const generation=this.reactionGeneration, ctx=this.context;
   const play=async(name:string,volume:number,duration:number)=>{
    try{const buffer=await this.load(`/assets/audio/crowd/${name}.mp3`);
     if(generation!==this.reactionGeneration||this.hostPaused||this.matchPaused||document.hidden||(!preview&&!this.inMatch)||ctx.state!=='running')return;
+    if(this.reactionSources.size>=6)return;
     const source=ctx.createBufferSource(),gain=ctx.createGain(),pan=ctx.createStereoPanner(),t=ctx.currentTime;
     source.buffer=buffer;pan.pan.value=(Math.random()-.5)*.5;
     const length=Math.min(buffer.duration,duration),offset=buffer.duration>length?Math.random()*(buffer.duration-length):0;
@@ -127,13 +133,13 @@ export class AudioManager {
   if(near)await play('gasp',event==='near-goal'?.5:.28,1.6);
   else await Promise.all([play('applause',.32,event==='goal'?4:2.2),...(['goal','late-winner','late-lead'].includes(event)?[play('cheer',.38,4.5)]:[])]);
  }
- private stopReactions(){this.reactionGeneration++;for(const source of this.reactionSources)source.stop();this.reactionSources.clear();}
+ private stopReactions(){this.reactionGeneration++;for(const source of this.stings)source.stop();this.stings.clear();for(const source of this.reactionSources)source.stop();this.reactionSources.clear();}
 
  cue(event:string){
   if(this.hostPaused||this.matchPaused||document.hidden)return;
   if(!this.context||this.context.state!=='running'){void this.unlock().then(()=>{if(this.context?.state==='running')this.cue(event);}).catch(()=>{});return;}
   const ctx=this.context,t=ctx.currentTime;
-  if(this.effects){if(['pass','shot','tackle'].includes(event))this.impact(event==='shot'?160:110,event==='shot'?.3:.18,.16);
+  if(this.effects){if(event==='post')this.impact(880,.16,.32);if(event==='goal')this.impact(90,.12,.22);if(['pass','shot','tackle'].includes(event))this.impact(event==='shot'?160:110,event==='shot'?.3:.18,.16);
    if(['kickoff','fulltime','foul','penalty'].includes(event))for(let i=0;i<(event==='fulltime'?3:1);i++){const osc=ctx.createOscillator(),gain=ctx.createGain();osc.frequency.value=2050;gain.gain.setValueAtTime(.0001,t+i*.22);gain.gain.linearRampToValueAtTime(.065,t+i*.22+.02);gain.gain.exponentialRampToValueAtTime(.0001,t+i*.22+.18);osc.connect(gain).connect(this.buses.sfx);osc.start(t+i*.22);osc.stop(t+i*.22+.2);}}
   void this.recordedCrowd(event);
 

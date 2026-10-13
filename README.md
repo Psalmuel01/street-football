@@ -23,7 +23,7 @@ The build generates `dist/`, including the production service worker. Deploy tha
 
 ## What's playable
 
-- Four communities, squad selection, formations, tactics and rolling substitutions.
+- Eight communities, distinct kits and playing styles, squad selection, four formations and rolling substitutions.
 - Quick matches with configurable conditions: golden hour, night and rain.
 - Practice with no running clock, full stamina, passive outfield opposition, an active keeper, and resettable through-ball/finishing drills.
 - Directional passing, through balls, sprinting, skills, keeper saves, sliding tackles, fouls and restarts.
@@ -114,3 +114,9 @@ Further notes:
 ## Repository hygiene
 
 `.DS_Store` files hold macOS Finder folder preferences. They are not app assets and should not be committed. Git ignores them at every directory level; Finder may recreate local copies harmlessly. Dependencies, production builds, local secrets and test-runner caches are also ignored.
+
+## Expanded matchday implementation
+
+Casual, Competitive and Expert change CPU decisions and organisation, not shared physical abilities. Five grounds are selectable: Surulere Yard, Marina Five, Lagos Matchday Arena, Residential Cage and Community Sands. The three-match Area Cup rotates opponents across eight clubs and migrates original four-club saves without discarding records. Progress is device-local; blocked storage is explained in the UI.
+
+See `docs/improvements/COMPLETE-UPGRADE.md` for verification, assets, limitations and release gates. Developer-only visual fixtures are under `tools/`; they are not production entry points and never make real purchases. Start with `npm run dev -- --port 5175` when needed. No server is intended to remain running after the implementation verification session.

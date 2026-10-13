@@ -1,48 +1,14 @@
-export const teams = [
-  {
-    id: "surulere",
-    name: "Surulere Stars",
-    short: "SUR",
-    color: "#f4c64b",
-    ink: "#242d24",
-    motto: "From the area. For the area.",
-    names: ["Tobi", "Dami", "Femi", "Seyi", "Bayo"],
-  },
-  {
-    id: "yaba",
-    name: "Yaba Boys",
-    short: "YAB",
-    color: "#5cc5b5",
-    ink: "#103b35",
-    motto: "Small space. Big ideas.",
-    names: ["Emeka", "Dele", "Tunde", "Kola", "Nnamdi"],
-  },
-  {
-    id: "agege",
-    name: "Agege Lions",
-    short: "AGE",
-    color: "#e8815d",
-    ink: "#48291d",
-    motto: "Every ball is our ball.",
-    names: ["Ayo", "Ife", "Wale", "Chidi", "Kunle"],
-  },
-  {
-    id: "mushin",
-    name: "Mushin United",
-    short: "MSH",
-    color: "#b5a3dc",
-    ink: "#33254c",
-    motto: "Together on this ground.",
-    names: ["Obi", "Segun", "Yemi", "Fola", "Tayo"],
-  },
+export type TeamStyle='balanced'|'possession'|'press'|'counter'|'compact';
+export type Team={id:string;name:string;short:string;color:string;ink:string;motto:string;names:string[];bench:string[];style:TeamStyle;identity:string;shape:'2-2'|'1-2-1'|'2-1-1';};
+/** Fictional football clubs; styles are design choices, not claims about their communities. */
+export const teams:Team[]=[
+ {id:'surulere',name:'Surulere Stars',short:'SUR',color:'#f4c64b',ink:'#242d24',motto:'From the area. For the area.',names:['Tobi','Dami','Femi','Seyi','Bayo'],bench:['Chuka','Lanre','Dayo','Uche'],style:'balanced',identity:'Steady shape. Support on both sides of the ball.',shape:'2-2'},
+ {id:'yaba',name:'Yaba Boys',short:'YAB',color:'#5cc5b5',ink:'#103b35',motto:'Small space. Big ideas.',names:['Emeka','Dele','Tunde','Kola','Nnamdi'],bench:['Seun','Ibrahim','Jide','Chima'],style:'possession',identity:'Short combinations. Patient build-up and close support.',shape:'1-2-1'},
+ {id:'agege',name:'Agege Lions',short:'AGE',color:'#e8815d',ink:'#48291d',motto:'Every ball is our ball.',names:['Ayo','Ife','Wale','Chidi','Kunle'],bench:['Sola','David','Faruq','Chinedu'],style:'press',identity:'Win it high. A second defender supports the press.',shape:'1-2-1'},
+ {id:'mushin',name:'Mushin United',short:'MSH',color:'#b5a3dc',ink:'#33254c',motto:'Together on this ground.',names:['Obi','Segun','Yemi','Fola','Tayo'],bench:['Dapo','Timi','Yusuf','Kelechi'],style:'compact',identity:'Protect the centre. Stay close and break together.',shape:'2-1-1'},
+ {id:'ikeja',name:'Ikeja Athletic',short:'IKJ',color:'#6d9fe8',ink:'#172d50',motto:'Every move has a purpose.',names:['Kunmi','Jamal','Duro','Niyi','Chisom'],bench:['Ade','Sadiq','Ikenna','Bolu'],style:'press',identity:'Quick pressure. Recover possession, then spread the play.',shape:'2-2'},
+ {id:'lekki',name:'Lekki Waves',short:'LKK',color:'#e7eadb',ink:'#28476a',motto:'Find your rhythm.',names:['Tosin','Nonso','Akin','Rasheed','Tolu'],bench:['Gbenga','Femi','Jude','Lekan'],style:'possession',identity:'Keep the ball. Find an open passing lane before advancing.',shape:'1-2-1'},
+ {id:'ikorodu',name:'Ikorodu Rovers',short:'IKD',color:'#d376b6',ink:'#4b1d3c',motto:'One team. Every chance.',names:['Folarin','Deji','Chuka','Seyi','Efe'],bench:['Dayo','Umar','Afolabi','Obinna'],style:'counter',identity:'Recover deep. Send a runner forward when the ball is won.',shape:'2-1-1'},
+ {id:'vi',name:'Victoria Island FC',short:'VIC',color:'#a7ce76',ink:'#263c1e',motto:'Play together. Go further.',names:['Bode','Nnamdi','Kazeem','Tunde','Chime'],bench:['Ifeanyi','Seun','Yemi','Wale'],style:'compact',identity:'Disciplined cover. Keep the middle protected and choose the break.',shape:'2-2'},
 ];
-export const lines = {
-  kickoff: "Oya, play ball!",
-  goal: "Goal!",
-  save: "Keeper! Safe hands.",
-  tackle: "Clean tackle. Carry go!",
-  fulltime: "Final whistle. Respect the game.",
-  skill: "Comot body!",
-  pass: "Pass am!",
-};
-export type Team = (typeof teams)[number];
+export const lines={kickoff:'Kick-off',goal:'Goal!',save:'Save',tackle:'Tackle',fulltime:'Full time',skill:'Skill',pass:'Pass'};

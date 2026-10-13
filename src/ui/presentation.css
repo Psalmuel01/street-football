@@ -1,0 +1,68 @@
+/* One presentation layer across clubhouse, setup, squad, pause, results and shop. */
+:root{--ui-panel:#172725;--ui-raised:#20322f;--ui-border:#a8bcb329;--ui-text:#f1f1e6;--ui-muted:#bdc9c0;--ui-accent:#d1ea83;--ui-radius:16px}
+body{background:#0d1918;color:var(--ui-text)}
+.site-header{background:#101f1ded;border-bottom:1px solid var(--ui-border)}
+.nav{font-size:12px;letter-spacing:.02em}.nav.active{color:var(--ui-accent)}
+.primary,.secondary,.mode-tabs button,.formation-options button{border-radius:12px!important;min-height:46px;transition:background .16s,box-shadow .16s,transform .16s}
+.primary{background:var(--ui-accent);color:#17281f;box-shadow:0 3px 0 #83985a55!important}.primary:hover{background:#e0f3a6}.secondary{background:#253a34;border:1px solid #879d8555!important;color:var(--ui-text)}
+.primary:active,.secondary:active{transform:translateY(1px)}
+.hero h1{font-size:clamp(48px,6.8vw,90px);line-height:.96;letter-spacing:-.025em}.hero-description{max-width:35ch;font-size:16px;line-height:1.6;color:var(--ui-muted)}
+.hero-footnote,.home-player-label p{font-size:10px;letter-spacing:.09em}.home-menu{gap:10px}.home-menu .secondary{font-size:12px}
+.section-heading h2{font-size:clamp(34px,4.8vw,60px);line-height:1.02}.section-heading>p,.section-heading>div>p{color:var(--ui-muted)}
+.team-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.team{border-radius:var(--ui-radius);border:1px solid var(--ui-border);min-height:270px;padding:22px 18px 58px;transition:transform .18s,border-color .18s;overflow:hidden}.team.selected{border-color:var(--kit);box-shadow:0 0 0 2px color-mix(in srgb,var(--kit) 28%,transparent)}.team-name{font-size:30px!important;line-height:1.02}.team-motto{font-size:11px!important;line-height:1.6}.team-playstyle{display:grid;gap:5px;margin-top:14px;font:11px/1.5 'Sora',sans-serif;max-width:25ch;color:inherit}.team-playstyle b{font-size:9px;letter-spacing:.1em;opacity:.75}.team .crest{width:58px;height:62px}.team-bottom{font-size:9px!important}
+.match-card,.tactical-board,.player-detail,.report-stats,.report-next,.kit-shop{border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius)!important;background:var(--ui-panel)!important;box-shadow:0 12px 36px #0002!important}
+.match-card h2{font-size:32px;margin-bottom:16px}.settings,.difficulty{gap:12px}.match-card label,.condition-settings label{font-size:10px;letter-spacing:.07em}.match-card select{background:#0c1b18;border:1px solid #90a68d44;border-radius:9px;padding:11px 12px;font-size:12px;color:var(--ui-text);min-height:46px}.condition-settings{background:#12211f;margin-top:18px}.condition-settings legend{font-size:10px;letter-spacing:.08em}.mode-tabs button.selected{background:var(--ui-accent);color:#14241d}.mode-tabs button{background:#243632;color:var(--ui-text);font-size:12px}
+.venue-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:8px 0}.venue-card{display:grid;align-content:start;gap:8px;min-height:80px;padding:10px 7px;border:1px solid var(--ui-border);border-radius:10px;background:#22342e;color:var(--ui-text);font:10px/1.4 'Sora',sans-serif;text-align:left}.venue-card[aria-pressed=true]{border-color:var(--ui-accent);background:#35452c}.venue-card svg{width:100%;height:35px}.venue-card span{font-size:9px;color:var(--ui-muted)}
+.squad-banner h2,.player-detail h2{font-size:40px!important}.squad-summary p,.tactic-description,.squad-note{font-size:12px;line-height:1.65;color:var(--ui-muted)}.athlete-card{border-radius:13px;border:1px solid var(--ui-border);background:var(--ui-raised);min-height:210px}.athlete-card strong{font-size:20px!important}.athlete-card.selected{border-color:var(--ui-accent)}.athlete-portrait{object-fit:contain}.player-hero{background:radial-gradient(ellipse at bottom,#3b5046,#172725)}.formation-options button{font-size:11px;min-height:52px}.formation-options button[aria-pressed=true]{border-color:var(--ui-accent);background:#314333}
+.pause-hub{border:1px solid var(--ui-border);border-radius:20px;background:var(--ui-panel)}.pause-content{background:var(--ui-panel)}#match-overlay .pause-content h2{font-size:48px;line-height:1}.pause-options button{border-radius:12px;background:var(--ui-raised);border:1px solid var(--ui-border);min-height:54px}.pause-tip{font-size:11px;line-height:1.6;color:var(--ui-muted)}
+.report-copy h1{font-size:clamp(46px,6vw,76px)!important;line-height:.96}.report-copy>p{font-size:14px;color:var(--ui-muted)}.report-score b{font-size:78px!important;font-variant-numeric:tabular-nums}.report-next h2{font-size:36px!important}.report-stat{padding:13px 0}.report-stat span{font-size:12px}.report-topline{font-size:10px!important;line-height:1.6}.report-club strong{font-size:18px}.report-club small{font-size:9px}
+#replay-banner{background:#142723ed;border:1px solid #a7c1af55;border-radius:12px}#skip-replay{min-height:44px}#player-tag{border:1px solid #b4c3a63d;background:#172723ec}#scoreboard{backdrop-filter:none}#scoreboard b{color:#f6f2d8}
+.kit-shop h2{font-size:30px}.kit-shop p{font-size:13px;line-height:1.65}.kit-shop .secondary{font-size:12px}.kit-shop select{background:#0f211c;color:var(--ui-text);border:1px solid #8ba28c66;border-radius:9px}.kit-swatches span{font-size:11px}
+body.route-transition:not(.in-match) main{animation:screen-enter .2s ease-out}@keyframes screen-enter{from{opacity:.65;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(max-width:1050px){.team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.team{min-height:260px}.squad-workspace{gap:16px}.report-score b{font-size:60px!important}}
+@media(max-width:600px){.site-header{padding:14px 16px}.hero h1{font-size:54px}.hero-description{font-size:14px}.hero-footnote{font-size:9px}.team-grid{gap:10px}.team{padding:15px 12px 48px;min-height:278px}.team-name{font-size:25px!important}.team .crest{width:46px;height:50px}.team-playstyle{font-size:10px;margin-top:10px}.team-motto{font-size:10px!important}.team-bottom{font-size:8px!important}.venue-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.venue-card{min-height:78px}.squad-banner h2,.player-detail h2{font-size:32px!important}.squad-workspace{grid-template-columns:1fr}.athlete-card{min-height:190px}.athlete-card strong{font-size:18px!important}.report-copy h1{font-size:48px!important}.report-next h2{font-size:30px!important}.report-club strong{font-size:15px}.report-topline{font-size:9px!important}#match-overlay .pause-content h2{font-size:36px}.kit-shop{padding:20px;margin:16px}.section-heading h2{font-size:38px}}
+@media(max-height:450px) and (orientation:landscape){#match-overlay .pause-content h2{font-size:30px}.pause-hub{max-width:760px}.pause-content{padding:18px}.pause-tip{display:none}}
+@media(prefers-reduced-motion:reduce){body.route-transition:not(.in-match) main{animation:none}button,.team,.primary,.secondary{transition:none!important}}
+
+.setup-action-strip{display:none}body[data-page=setup] .setup-action-strip strong{font-size:12px;line-height:1.5}.setup-action-strip small{display:block;font-size:8px;letter-spacing:.1em;color:#bac9b3;margin-bottom:4px}
+@media(max-width:900px){body[data-page=setup]{padding-bottom:96px}body[data-page=setup] .setup-action-strip{position:fixed;bottom:0;left:0;right:0;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(14px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));background:#122620f5;border-top:1px solid #a5bb9855;box-shadow:0 -8px 24px #0003}body[data-page=setup] .setup-action-strip .primary{padding:12px 14px;font-size:11px;flex-shrink:0}body[data-page=setup] #play{display:none}}
+
+.cup-storage-warning{padding:10px;border:1px solid #d7bc7955;border-radius:9px;color:#efdaa2!important;font-size:12px;line-height:1.6}
+.mode-tabs button{width:100%!important;justify-self:stretch;text-align:center;padding:11px!important}
+.motion-controls button{min-height:44px;font-size:10px}
+@media(max-width:600px){.squad-preview{height:180px!important;min-height:180px!important}.squad-preview #squad-model{height:160px!important}.squad-preview .squad-caption{bottom:10px}.squad-preview .squad-caption strong{font-size:22px}}
+
+/* Keep light labels readable; the legacy secondary hover used a yellow fill. */
+.secondary:hover,.home-menu .secondary:hover{
+  background:#344f45;color:#f1f1e6;border-color:#819a8c!important;
+}
+.mode-tabs button:not(.selected):hover,.formation-options button:hover,
+.pause-options button:hover,.motion-controls button:hover{
+  background:#344f45;color:#f1f1e6;
+}
+.mode-tabs button.selected:hover{background:#e0f3a6;color:#14241d}
+.primary:hover,.home-menu .primary:hover{color:#17281f}
+.secondary:focus-visible,.mode-tabs button:focus-visible,
+.formation-options button:focus-visible,.pause-options button:focus-visible,
+.motion-controls button:focus-visible{outline:3px solid #d1ea83;outline-offset:3px}
+
+/* Size card columns from their panel width, including narrow desktop sidebars. */
+.venue-cards{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr));
+  gap:8px;
+}
+.venue-card{min-width:0;max-width:100%;padding:12px 10px;white-space:normal}
+.venue-card strong,.venue-card span{min-width:0;max-width:100%;overflow-wrap:anywhere;hyphens:auto}
+.venue-card svg{display:block;min-width:0;max-width:100%}
+/* Grid/flex children must be able to shrink before their text wraps. */
+.match-card,.condition-settings,.squad-workspace>*,.starting-grid>*,
+.team-grid>*,.report-bottom>*,.pause-options>*,.kit-shop,
+.settings>*,.difficulty>*{min-width:0;max-width:100%}
+.match-card,.player-detail,.report-next,.kit-shop{overflow-wrap:anywhere}
+.match-card select,.kit-shop select{min-width:0;max-width:100%;width:100%}
+.team-name,.team-motto,.team-playstyle,.athlete-card strong,
+.athlete-card small,.report-club strong,.squad-summary,
+.formation-options button,.mode-tabs button{min-width:0;overflow-wrap:anywhere;white-space:normal}
+.formation-options{flex-wrap:wrap}
+.formation-options button{flex:1 1 80px}
+.setup-action-strip>div{min-width:0;overflow-wrap:anywhere}

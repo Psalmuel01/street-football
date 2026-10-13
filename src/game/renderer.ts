@@ -1,5 +1,6 @@
+import {batchStatic} from './static-batch';
 import {Venues} from './venues';
-import {grounds,type Ground} from '../content/grounds';
+import {grounds,DEFAULT_GROUND,type Ground} from '../content/grounds';
 import {Neighbourhood} from "./neighbourhood";
 import {gameplay} from "./gameplay.config";
 import {Atmosphere} from "./atmosphere";
@@ -17,7 +18,7 @@ import { StreetLife } from "./street-life";
 export class PitchRenderer {
   streetEnvironment=new THREE.Group();
   private surfaceTextures=new Map<Ground,THREE.Texture>();
-  ground:Ground='surulere';
+  ground:Ground=DEFAULT_GROUND;
   venues:Venues;
   street: StreetLife;
   atmosphere:Atmosphere;
@@ -114,6 +115,14 @@ export class PitchRenderer {
       for (let y = 0.2; y < 2.5; y += 0.4)
         this.box(x + Math.sign(x) * 1.4, y, 0, 0.035, 0.035, 6.6, "#d5dbca");
     }
+    // Visible rebound boards follow the same boundary coordinates as the simulation.
+    const reboundBoards=new THREE.Group();reboundBoards.name='rebound-boards';
+    for(const z of [-PITCH.halfWidth,PITCH.halfWidth])reboundBoards.add(this.box(0,.38,z,60,.76,.16,'#9aab94'));
+    for(const x of [-PITCH.halfLength,PITCH.halfLength])for(const side of [-1,1]){
+      const length=PITCH.halfWidth-PITCH.goalHalfWidth-.1;
+      reboundBoards.add(this.box(x,.38,side*(PITCH.goalHalfWidth+.1+length/2),.16,.76,length,'#9aab94'));
+    }
+    batchStatic(reboundBoards);this.scene.add(reboundBoards);
     for (const z of [-19.8, 19.8]) {
       this.box(0, 0.55, z, 65, 1.1, 0.35, "#d2b080");
       for (let x = -32; x <= 32; x += 4) {
@@ -274,6 +283,7 @@ export class PitchRenderer {
       }
     }
     for(const child of [...this.scene.children])if(!palmsStart.has(child))this.streetEnvironment.add(child);
+    batchStatic(this.streetEnvironment);
     for (let i = 0; i < 10; i++) {
       const rig = createCharacter(
         i % 5 === 0 ? "#d66b49" : colors[i < 5 ? 0 : 1],
@@ -307,8 +317,13 @@ export class PitchRenderer {
     new ResizeObserver(() => this.resize()).observe(host);
     this.resize();
   }
+  private autoQuality=false;private quality='high';private measuredFrame=1/60;private qualityFrames=0;
   setQuality(level:string){
-    const quality=level==='auto'?(matchMedia('(pointer:coarse)').matches?'medium':'high'):level;
+    this.autoQuality=level==='auto';this.qualityFrames=0;
+    this.applyQuality(level==='auto'?(matchMedia('(pointer:coarse)').matches?'medium':'high'):level);
+  }
+  private applyQuality(level:string){
+    const quality=level;this.quality=quality;
     this.renderer.setPixelRatio(quality==='low'?1:Math.min(devicePixelRatio,quality==='medium'?1.3:1.8));
     this.renderer.shadowMap.enabled=quality!=='low';
     const size=quality==='high'?2048:1024;
@@ -321,7 +336,7 @@ export class PitchRenderer {
     this.courtMaterial.map=this.surfaceTexture(ground);this.courtMaterial.bumpMap=this.courtMaterial.map;this.courtMaterial.needsUpdate=true;
     const label=document.querySelector('.scene-label span'),title=document.querySelector('.scene-label h2');
     if(label)label.textContent=grounds[ground].tag;if(title)title.textContent=grounds[ground].name;
-    const surface=document.querySelector('.court-bottom>span');if(surface)surface.textContent=`5 VS 5 / ${ground==='arena'?'ALL-WEATHER':'CONCRETE'} / NO OFFSIDE`;
+    const surface=document.querySelector('.court-bottom>span');if(surface)surface.textContent=`5 VS 5 / ${ground==='arena'?'ALL-WEATHER':ground==='sand'?'FIRM SAND':'CONCRETE'} / NO OFFSIDE`;
   }
   private surfaceTexture(ground:Ground){
     const cached=this.surfaceTextures.get(ground);if(cached)return cached;
@@ -329,6 +344,7 @@ export class PitchRenderer {
     ctx.fillStyle='#dbdfda';ctx.fillRect(0,0,512,256);
     if(ground==='arena')for(let i=0;i<8;i++){ctx.fillStyle=i%2?'#cbd8c5':'#edf0df';ctx.fillRect(i*64,0,64,256);}
     for(let i=0;i<5000;i++){const x=(i*73.17)%512,y=(i*47.31)%256;ctx.fillStyle=i%2?'#ffffff15':'#273d2913';ctx.fillRect(x,y,ground==='arena'?1:2,ground==='arena'?3:1);}
+    if(ground==='sand'){ctx.fillStyle='#bca779';for(let i=0;i<1000;i++)ctx.fillRect((i*37)%512,(i*79)%256,2,2);}
     if(ground==='marina'){ctx.strokeStyle='#4c637322';for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(i*120,0);ctx.lineTo(i*120+20,256);ctx.stroke();}}
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=this.renderer.capabilities.getMaxAnisotropy();this.surfaceTextures.set(ground,texture);return texture;
   }
@@ -453,15 +469,16 @@ export class PitchRenderer {
     if(decision){rig.arms[1].rotation.set(-1.35,0,.15);rig.elbows[1].rotation.x=-.1;rig.arms[0].rotation.x=-.7;rig.elbows[0].rotation.x=-1.5;}
   }
   private crowdMood='goal';
-  react(kind:string,intensity=1){if(['goal','late-lead','late-winner','big-save','nutmeg','near-goal','miss','foul','hard-tackle'].includes(kind)){this.crowdMood=kind;this.crowdStart=this.street.time;this.cheerUntil=this.street.time+2.2*intensity;}}
+  react(kind:string,intensity=1){if(['goal','late-lead','late-winner','big-save','nutmeg','near-goal','miss','foul','hard-tackle'].includes(kind)){this.crowdMood=kind;this.crowdStart=this.clock;this.cheerUntil=this.clock+2.2*intensity;}}
   draw(match: MatchFrame, dt: number, replay=false) {
-    this.clock = match.presentationTime;
-    this.neighbourhood.update(dt,match.players,match.state==='PAUSED'||match.state==='FULL_TIME',this.wet);
-    this.street.update(dt, match.state === "PAUSED" || match.state === "FULL_TIME");
+    if(this.autoQuality){this.measuredFrame=this.measuredFrame*.98+dt*.02;if(++this.qualityFrames>=180&&this.measuredFrame>1/35&&this.quality!=='low'){this.applyQuality(this.quality==='high'?'medium':'low');this.qualityFrames=0;}}
+    this.clock = match.presentationTime;this.venues.update(this.clock);
+    if(this.ground==='surulere')this.neighbourhood.update(dt,match.players,match.state==='PAUSED'||match.state==='FULL_TIME',this.wet);
+    if(this.ground==='surulere')this.street.update(dt, match.state === "PAUSED" || match.state === "FULL_TIME");
     this.atmosphere.update(dt,match.state==='PAUSED'||match.state==='FULL_TIME');
     const total=match.score[0]+match.score[1];
-    if(total>this.lastScore)this.cheerUntil=this.street.time+3;this.lastScore=total;
-    this.spectators.forEach((rig,i)=>{if(!rig.root.visible)return;const cheering=this.street.time<this.cheerUntil && (i%4!==0);animateCharacter(rig,this.street.time,0,i,false,cheering?{kind:'celebrate',elapsed:Math.max(0,Math.min(2.49,this.street.time-this.crowdStart-(i%5)*.06)),duration:2.5,side:1,contacted:true}:null);if(cheering&&['miss','near-goal','foul'].includes(this.crowdMood)){rig.arms[0].rotation.set(-1.8,0,-.25);rig.arms[1].rotation.set(-1.8,0,.25);rig.elbows.forEach(b=>b.rotation.x=-1.3);rig.head.rotation.x=.15;}if(!cheering){rig.head.rotation.y+=Math.sin(this.street.time*.4+i)*.18;
+    if(total>this.lastScore)this.cheerUntil=this.clock+3;this.lastScore=total;
+    this.spectators.forEach((rig,i)=>{if(!rig.root.visible)return;const cheering=this.clock<this.cheerUntil && (i%4!==0);animateCharacter(rig,this.clock,0,i,false,cheering?{kind:'celebrate',elapsed:Math.max(0,Math.min(2.49,this.clock-this.crowdStart-(i%5)*.06)),duration:2.5,side:1,contacted:true}:null);if(cheering&&['miss','near-goal','foul'].includes(this.crowdMood)){rig.arms[0].rotation.set(-1.8,0,-.25);rig.arms[1].rotation.set(-1.8,0,.25);rig.elbows.forEach(b=>b.rotation.x=-1.3);rig.head.rotation.x=.15;}if(!cheering){rig.head.rotation.y+=Math.sin(this.clock*.4+i)*.18;
       if(i%10===0){rig.hips.position.y=.55;rig.legs.forEach(b=>b.rotation.x=-1.42);rig.knees.forEach(b=>b.rotation.x=1.42);rig.elbows.forEach(b=>b.rotation.x=-.9);}
       else if(i%5===0){rig.bones.spine.rotation.x=.15;rig.elbows.forEach(b=>b.rotation.x=-1.1);}
       else if(i%7===0){rig.arms[1].rotation.x=-.9;rig.elbows[1].rotation.x=-1.65;rig.head.rotation.x=.16;}
@@ -488,8 +505,8 @@ export class PitchRenderer {
     this.ball.position.set(match.ball.x, 0.235 + match.ball.z, match.ball.y);
     const animationDt =
       match.state === "PAUSED" || match.state === "FULL_TIME" ? 0 : dt;
-    this.ball.rotation.x += match.ball.vy * animationDt;
-    this.ball.rotation.z -= match.ball.vx * animationDt;
+    this.ball.rotation.x += match.ball.vy * animationDt/.13;
+    this.ball.rotation.z -= match.ball.vx * animationDt/.13;
     const p = match.players[match.active];
     this.ring.position.set(p.x, 0.14, p.y);
     const targetReceiver=match.passFlight ? match.players[match.passFlight.receiver] : null;
