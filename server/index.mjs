@@ -13,7 +13,7 @@ let service,store;
 if(secret&&gameId&&database){
  if(!process.env.PUBLIC_ORIGIN)throw new Error('PUBLIC_ORIGIN is required for purchase service');
  if(!['test','live'].includes(mode)||!secret.startsWith(mode==='test'?'vtr_test_':'vtr_live_'))throw new Error('Vatar key/mode mismatch');
- store=await createStore(database);
+ try{store=await createStore(database);}catch{console.error('Purchase database initialization failed. Check the server DATABASE_URL and database availability.');process.exit(1);}
  const api=async(route,body)=>{
   const response=await fetch('https://lagoslife.app/api/games/v1'+route,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${secret}`,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(10000),redirect:'error'});
   if(!response.ok)throw new PurchaseError('platform_verification_failed',response.status>=500?503:response.status);

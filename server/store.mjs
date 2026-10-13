@@ -1,13 +1,21 @@
 import pg from 'pg';
 export async function createStore(connectionString){
  const pool=new pg.Pool({connectionString,max:5,connectionTimeoutMillis:10000,statement_timeout:10000});
+ pool.on('error',()=>console.error('Database connection interrupted; subsequent requests will reconnect.'));
+ const migration=await pool.connect();
+ try{
+ await migration.query('BEGIN');
+ await migration.query('SELECT pg_advisory_xact_lock(731592046)');
  // Namespaced by game AND mode: sandbox ownership can never grant live cosmetics.
- await pool.query(`CREATE TABLE IF NOT EXISTS lsf_kit_purchases (
+ await migration.query(`CREATE TABLE IF NOT EXISTS lsf_kit_purchases (
    game_id TEXT NOT NULL, mode TEXT NOT NULL CHECK(mode IN ('test','live')),
    purchase_id TEXT NOT NULL, player_id TEXT NOT NULL, product_id TEXT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(game_id,mode,purchase_id)
  )`);
- await pool.query('CREATE INDEX IF NOT EXISTS lsf_kit_owner ON lsf_kit_purchases(game_id,mode,player_id)');
+ await migration.query('CREATE INDEX IF NOT EXISTS lsf_kit_owner ON lsf_kit_purchases(game_id,mode,player_id)');
+ await migration.query('COMMIT');
+ }catch(error){await migration.query('ROLLBACK').catch(()=>{});migration.release();await pool.end();throw error;}
+ migration.release();
  return {
   async grant(p){
    const result=await pool.query(`INSERT INTO lsf_kit_purchases(game_id,mode,purchase_id,player_id,product_id)
