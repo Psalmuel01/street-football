@@ -1,5 +1,6 @@
 interface InstallEvent extends Event {prompt():Promise<void>;userChoice:Promise<{outcome:string}>}
 export function setupInstall(){
+ if(window.parent !== window)return;
  let deferred:InstallEvent|null=null;
  const installed=()=>window.matchMedia('(display-mode: standalone)').matches||(navigator as Navigator & {standalone?:boolean}).standalone;
  const button=document.createElement('button');button.id='install-app';button.textContent='↗ TAKE THE STREET WITH YOU · INSTALL APP';button.hidden=!!installed();

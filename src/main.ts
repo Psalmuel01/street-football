@@ -1,3 +1,4 @@
+import {setupLagosLife} from './platform/lagos-life';
 import {pauseMarkup} from './ui/pause';
 import {setupInstall} from './ui/install';
 import {resultsMarkup} from "./ui/results";
@@ -331,10 +332,21 @@ async function boot() {
   let previous = performance.now(),
     accumulator = 0;
   let queued = idle();
+  let hostPaused = false;
+  void setupLagosLife(paused => {
+    hostPaused = paused;
+    input.reset(); queued = idle(); accumulator = 0; previous = performance.now();
+    audio.setHostPaused(paused);
+  });
+  if(window.parent !== window)$('#fullscreen').hidden = true;
   function frame(now: number) {
     const dt = Math.min(0.06, (now - previous) / 1000);
     debug?.((now-previous)/1000);
     previous = now;
+    if(hostPaused){
+      accumulator = 0; queued = idle(); input.reset();
+      requestAnimationFrame(frame); return;
+    }
     accumulator += dt;
     const fresh = running ? input.read() : idle();
     queued = {
