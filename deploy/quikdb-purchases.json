@@ -1,0 +1,8 @@
+{
+  "runtime": "nodejs",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "startCommand": "npm start",
+  "port": 5173,
+  "healthCheckPath": "/health"
+}

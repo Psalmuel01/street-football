@@ -10,16 +10,18 @@
     "assets:character": "node scripts/build-character.mjs",
     "test:animation": "node scripts/animation-check.mjs",
     "voices:plan": "node --env-file=.env scripts/build-native-voices.mjs --dry-run",
-    "voices:build": "node --env-file=.env scripts/build-native-voices.mjs"
+    "voices:build": "node --env-file=.env scripts/build-native-voices.mjs",
+    "start": "node server/index.mjs"
   },
   "dependencies": {
+    "pg": "^8.23.1",
     "three": "^0.180.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/three": "^0.180.0",
-    "typescript": "^5.9.0",
-    "vite": "^6.1.0",
     "tsx": "^4.20.0",
-    "@playwright/test": "^1.55.0"
+    "typescript": "^5.9.0",
+    "vite": "^6.1.0"
   }
 }

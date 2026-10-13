@@ -1,5 +1,8 @@
 {
   "name": "lagos-street-football",
-  "runtime": "static",
-  "buildCommand": "npm ci && npm run build"
+  "runtime": "nodejs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "startCommand": "npm start",
+  "port": 5173
 }

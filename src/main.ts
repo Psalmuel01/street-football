@@ -37,6 +37,8 @@ async function boot() {
   const gamePlans:Tactic[]=teams.map(()=>'balanced');
   const shapes:Formation[]=teams.map(()=>'2-2');
   let selectedSlot=3,managingLive=false;
+  let kitColour:string|null=null;
+  const homeKit=(team:number)=>kitColour??teams[team].color;
   let renderer = new PitchRenderer(document.querySelector("#court")!, [
     teams[0].color,
     teams[1].color,
@@ -62,13 +64,13 @@ async function boot() {
   function renderSquad(){
     const team=managingLive?playingTeam:chosen,roster=managingLive?match.rosters[0]:makeRoster(team),lineup=managingLive?match.lineups[0]:startingFives[team];
     const stamina=managingLive?match.players.slice(0,5).map(p=>p.stamina):[1,1,1,1,1];
-    $('#squad-page').style.setProperty('--squad-kit',teams[team].color);
+    $('#squad-page').style.setProperty('--squad-kit',homeKit(team));
     $('#squad-content').innerHTML=squadMarkup(roster,lineup,selectedSlot,stamina,managingLive?match.tactics[0]:gamePlans[team],managingLive,team,managingLive?match.formations[0]:shapes[team]);
     $('#squad-continue').textContent=managingLive?'RETURN TO MATCH ↗':'MATCH SETUP ↗';
     document.querySelectorAll<HTMLElement>('[data-slot]').forEach(el=>el.onclick=()=>{selectedSlot=Number(el.dataset.slot);renderSquad();});
     document.querySelectorAll<HTMLElement>('[data-reserve]').forEach(el=>el.onclick=()=>{
       const reserve=Number(el.dataset.reserve),out=roster[lineup[selectedSlot]].name;
-      if(managingLive){if(!match.substitute(selectedSlot,reserve))return;renderer.setPlayerAppearance(selectedSlot,selectedSlot===0?'#d66b49':teams[playingTeam].color,reserve,roster[reserve].number);}
+      if(managingLive){if(!match.substitute(selectedSlot,reserve))return;renderer.setPlayerAppearance(selectedSlot,selectedSlot===0?'#d66b49':homeKit(playingTeam),reserve,roster[reserve].number);}
       else lineup[selectedSlot]=reserve;
       renderSquad();$('#squad-feedback').textContent=`${roster[reserve].name} replaces ${out}.`;
     });
@@ -159,7 +161,7 @@ async function boot() {
       };
     });
   function refreshTeams() {
-    squadPreview.setColor(teams[chosen].color);
+    squadPreview.setColor(homeKit(chosen));
     document.documentElement.style.setProperty("--selected-kit",teams[chosen].color);
     $("#squad-name").textContent = teams[chosen].name.toUpperCase();
     document.querySelectorAll<HTMLElement>("[data-team]").forEach((el, i) => {
@@ -218,10 +220,10 @@ async function boot() {
     match.training=mode==='training';if(match.training)match.resetDrill();
     $('#training-panel').hidden=!match.training;
     renderer.lastScore=0;
-    match.players.forEach(p=>renderer.setPlayerAppearance(p.id,p.keeper?'#d66b49':teams[p.team===0?chosen:opponent].color,match.lineups[p.team][p.id%5],match.athlete(p).number));
+    match.players.forEach(p=>renderer.setPlayerAppearance(p.id,p.keeper?'#d66b49':p.team===0?homeKit(chosen):teams[opponent].color,match.lineups[p.team][p.id%5],match.athlete(p).number));
     $("#home-score-name").textContent = teams[chosen].short;
     $("#away-score-name").textContent = teams[opponent].short;
-    $("#scoreboard").style.setProperty("--home-kit",teams[chosen].color);
+    $("#scoreboard").style.setProperty("--home-kit",homeKit(chosen));
     $("#scoreboard").style.setProperty("--away-kit",teams[opponent].color);
     squadPreview.setMotion("idle", performance.now() / 1000);
     squadPreview.draw(performance.now() / 1000);
@@ -337,6 +339,14 @@ async function boot() {
     hostPaused = paused;
     input.reset(); queued = idle(); accumulator = 0; previous = performance.now();
     audio.setHostPaused(paused);
+  },colour=>{
+    kitColour=colour;
+    refreshTeams();
+    if(running){
+      for(const p of match.players.filter(p=>p.team===0&&!p.keeper))renderer.setPlayerAppearance(p.id,homeKit(playingTeam),match.lineups[0][p.id],match.athlete(p).number);
+      $('#scoreboard').style.setProperty('--home-kit',homeKit(playingTeam));
+    }
+    if(router.page==='squad')renderSquad();
   });
   if(window.parent !== window)$('#fullscreen').hidden = true;
   function frame(now: number) {

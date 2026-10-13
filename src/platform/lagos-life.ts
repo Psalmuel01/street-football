@@ -1,3 +1,4 @@
+import {setupKitShop,type KitSDK} from './kit-shop';
 /** The hosted SDK owns parent-origin validation; never implement a wildcard message bridge. */
 export interface VatarSDK {
   init(): Promise<{ player: { id: string; name: string; avatar: string | null }; mode: 'test' | 'live' }>;
@@ -15,7 +16,7 @@ export async function connectVatar(sdk: VatarSDK, pause: (paused: boolean) => vo
     throw error;
   }
 }
-export async function setupLagosLife(pause: (paused: boolean) => void) {
+export async function setupLagosLife(pause: (paused: boolean) => void,onColour:(colour:string|null)=>void=()=>{}) {
   if (window.parent === window) return;
   try {
     const sdk = await new Promise<VatarSDK>((resolve, reject) => {
@@ -33,7 +34,10 @@ export async function setupLagosLife(pause: (paused: boolean) => void) {
     });
     const connection = await connectVatar(sdk, pause);
     document.documentElement.dataset.vatarMode = connection.identity.mode;
-    window.addEventListener('pagehide', connection.disconnect, { once: true });
+    const commerce=sdk as VatarSDK & Partial<KitSDK>;
+    const shop=typeof commerce.session==='function'&&typeof commerce.purchase==='function'&&typeof commerce.purchases==='function'&&typeof commerce.onPurchase==='function'?setupKitShop(commerce as KitSDK,onColour):null;
+    const stopRestore=sdk.onResume(()=>{void shop?.refresh();});
+    window.addEventListener('pagehide',()=>{stopRestore();shop?.disconnect();connection.disconnect();},{once:true});
   } catch {
     // Standalone and unrelated frames remain playable; no identity/session is persisted.
     document.documentElement.dataset.vatarMode = 'unavailable';
